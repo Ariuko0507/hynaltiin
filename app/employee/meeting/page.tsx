@@ -1,216 +1,278 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { EmployeeShell } from "../_components/employee-shell";
 
-const initialMeetingItems = [
+type MeetingStatus = "Төлөвлөсөн" | "Баталгаажсан" | "Цуцлагдсан";
+
+type MeetingItem = {
+  id: string;
+  title: string;
+  status: MeetingStatus;
+  organizer: string;
+  date: string;
+  location: string;
+};
+
+const initialMeetingItems: MeetingItem[] = [
   {
     id: "M-001",
     title: "Сарын тайлангийн хурал",
-    status: "Эхэлсэн",
+    status: "Баталгаажсан",
     organizer: "Админ Бат",
-    date: "2026-04-20",
+    date: "2026-04-29 10:00",
+    location: "2 давхар, хурлын өрөө A",
   },
   {
     id: "M-002",
     title: "Төслийн явцын уулзалт",
-    status: "Зассан",
+    status: "Төлөвлөсөн",
     organizer: "Менежер Тэмүүжин",
-    date: "2026-04-18",
+    date: "2026-04-30 14:00",
+    location: "Google Meet",
   },
   {
     id: "M-003",
     title: "Стратегийн төлөвлөгөөний хурал",
-    status: "Эсхийг",
+    status: "Цуцлагдсан",
     organizer: "Директор Энх",
-    date: "2026-04-22",
+    date: "2026-05-01 09:00",
+    location: "Төв байр, хурлын танхим",
   },
 ];
+
+function getStatusClasses(status: MeetingStatus) {
+  if (status === "Баталгаажсан") {
+    return "bg-emerald-100 text-emerald-700";
+  }
+
+  if (status === "Төлөвлөсөн") {
+    return "bg-sky-100 text-sky-700";
+  }
+
+  return "bg-rose-100 text-rose-700";
+}
 
 export default function EmployeeMeetingPage() {
   const [items, setItems] = useState(initialMeetingItems);
   const [showForm, setShowForm] = useState(false);
   const [newMeeting, setNewMeeting] = useState({
     title: "",
-    status: "Эхэлсэн",
+    status: "Төлөвлөсөн" as MeetingStatus,
     date: "",
+    location: "",
   });
 
-  const handleCreate = () => {
-    setShowForm(true);
-  };
-
   const handleSend = () => {
-    if (newMeeting.title && newMeeting.date) {
-      const newItem = {
-        id: `M-${String(items.length + 1).padStart(3, "0")}`,
-        title: newMeeting.title,
-        status: newMeeting.status,
-        organizer: "Ажилтан",
-        date: newMeeting.date,
-      };
-      setItems([...items, newItem]);
-      setNewMeeting({ title: "", status: "Эхэлсэн", date: "" });
-      setShowForm(false);
+    if (!newMeeting.title || !newMeeting.date || !newMeeting.location) {
+      return;
     }
-  };
 
-  const sidebarLinks = [
-    { href: "/employee/dashboard", label: "Самбар", icon: "📊" },
-    { href: "/employee/tasks", label: "Даалгавар", icon: "📋" },
-    { href: "/employee/fulfillment", label: "Биелүүлэлт", icon: "✅" },
-    { href: "/employee/meeting", label: "Хурал", icon: "👥" },
-  ];
+    const newItem: MeetingItem = {
+      id: `M-${String(items.length + 1).padStart(3, "0")}`,
+      title: newMeeting.title,
+      status: newMeeting.status,
+      organizer: "Ажилтан Сарнай",
+      date: newMeeting.date,
+      location: newMeeting.location,
+    };
+
+    setItems((current) => [...current, newItem]);
+    setNewMeeting({ title: "", status: "Төлөвлөсөн", date: "", location: "" });
+    setShowForm(false);
+  };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-950 dark:bg-black dark:text-zinc-50 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 p-6">
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Ажилтан Панел</h2>
-        </div>
-        <nav className="space-y-2">
-          {sidebarLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 rounded-lg transition dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-            >
-              <span>{link.icon}</span>
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-8 pt-8 border-t border-zinc-200 dark:border-zinc-700">
-          <Link
-            href="/"
-            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 rounded-lg transition dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-          >
-            <span>🏠</span>
-            Нүүр хуудас
-          </Link>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 p-8">
-        <div className="max-w-6xl mx-auto">
-          <header className="mb-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">
-              Ажилтны хурал
-            </p>
-            <h1 className="mt-2 text-4xl font-semibold tracking-tight">
-              Хурал үүсгэх
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-              Хурал үүсгэх болон илгээх эрхтэй.
-            </p>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={handleCreate}
-                className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700"
-              >
-                Хурал үүсгэх
-              </button>
+    <EmployeeShell
+      currentPath="/employee/meeting"
+      kicker="Meetings"
+      title="Хурал, уулзалтын хуваарь"
+      description="Өөрийн оролцох хурал, зохион байгуулагч, хугацаа болон байршлыг нэг ижил загвартайгаар харж, шаардлагатай үед шинэ уулзалт үүсгэнэ."
+      stats={[
+        { label: "Энэ 7 хоног", value: "5" },
+        { label: "Баталгаажсан", value: "3" },
+        { label: "Төлөвлөсөн", value: "1" },
+        { label: "Цуцлагдсан", value: "1" },
+      ]}
+      action={
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+        >
+          Хурал үүсгэх
+        </button>
+      }
+      noteText="Шинэ хурал оруулахдаа огноо, байршил, оролцогчдод очих мэдээллийг дутуу үлдээхгүйгээр бөглөөрэй."
+    >
+      {showForm ? (
+        <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Шинэ бүртгэл</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-950">Хурал үүсгэх</h2>
             </div>
-          </header>
-
-          {showForm && (
-            <div className="mb-8 rounded-[32px] border border-zinc-200 bg-zinc-50 p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-              <h3 className="mb-4 text-lg font-semibold">Шинэ хурал үүсгэх</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    Гарчиг
-                  </label>
-                  <input
-                    type="text"
-                    value={newMeeting.title}
-                    onChange={(e) => setNewMeeting({ ...newMeeting, title: e.target.value })}
-                    className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    Статус
-                  </label>
-                  <select
-                    value={newMeeting.status}
-                    onChange={(e) => setNewMeeting({ ...newMeeting, status: e.target.value })}
-                    className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-                  >
-                    <option value="Эхэлсэн">Эхэлсэн</option>
-                    <option value="Зассан">Зассан</option>
-                    <option value="Эсхийг">Эсхийг</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    Огноо
-                  </label>
-                  <input
-                    type="date"
-                    value={newMeeting.date}
-                    onChange={(e) => setNewMeeting({ ...newMeeting, date: e.target.value })}
-                    className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-                  />
-                </div>
-              </div>
-              <div className="mt-4 flex gap-3">
-                <button
-                  onClick={handleSend}
-                  className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700"
-                >
-                  Илгээх
-                </button>
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="inline-flex items-center justify-center rounded-full border border-zinc-300 bg-white px-5 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
-                >
-                  Цуцлах
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="overflow-hidden rounded-[32px] border border-zinc-200 bg-zinc-50 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-            <table className="min-w-full border-collapse text-left text-sm">
-              <thead>
-                <tr className="bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
-                  <th className="px-6 py-4">ID</th>
-                  <th className="px-6 py-4">Гарчиг</th>
-                  <th className="px-6 py-4">Статус</th>
-                  <th className="px-6 py-4">Зохион байгуулагч</th>
-                  <th className="px-6 py-4">Огноо</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id} className="border-t border-zinc-200 dark:border-zinc-800">
-                    <td className="px-6 py-4 font-medium text-zinc-950 dark:text-zinc-50">{item.id}</td>
-                    <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300">{item.title}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                          item.status === "Эхэлсэн"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"
-                            : item.status === "Зассан"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
-                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200"
-                        }`}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300">{item.organizer}</td>
-                    <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300">{item.date}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
-        </div>
-      </main>
-    </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Гарчиг</span>
+              <input
+                type="text"
+                value={newMeeting.title}
+                onChange={(event) =>
+                  setNewMeeting((current) => ({ ...current, title: event.target.value }))
+                }
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Төлөв</span>
+              <select
+                value={newMeeting.status}
+                onChange={(event) =>
+                  setNewMeeting((current) => ({
+                    ...current,
+                    status: event.target.value as MeetingStatus,
+                  }))
+                }
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
+              >
+                <option value="Төлөвлөсөн">Төлөвлөсөн</option>
+                <option value="Баталгаажсан">Баталгаажсан</option>
+                <option value="Цуцлагдсан">Цуцлагдсан</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Огноо</span>
+              <input
+                type="datetime-local"
+                value={newMeeting.date}
+                onChange={(event) =>
+                  setNewMeeting((current) => ({ ...current, date: event.target.value }))
+                }
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Байршил</span>
+              <input
+                type="text"
+                value={newMeeting.location}
+                onChange={(event) =>
+                  setNewMeeting((current) => ({ ...current, location: event.target.value }))
+                }
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
+              />
+            </label>
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleSend}
+              className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              Илгээх
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-50"
+            >
+              Цуцлах
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Хуваарь</p>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Ойрын хурлууд</h2>
+
+          <div className="mt-6 overflow-hidden rounded-[24px] border border-slate-200">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Код</th>
+                    <th className="px-4 py-3 font-medium">Гарчиг</th>
+                    <th className="px-4 py-3 font-medium">Зохион байгуулагч</th>
+                    <th className="px-4 py-3 font-medium">Огноо</th>
+                    <th className="px-4 py-3 font-medium">Төлөв</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {items.map((item) => (
+                    <tr key={item.id}>
+                      <td className="px-4 py-4 font-medium text-slate-950">{item.id}</td>
+                      <td className="px-4 py-4 text-slate-700">
+                        <p className="font-medium text-slate-950">{item.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">{item.location}</p>
+                      </td>
+                      <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
+                      <td className="px-4 py-4 text-slate-700">{item.date}</td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                            item.status
+                          )}`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Товч карт</p>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Хурал бүрийн мэдээлэл</h2>
+
+          <div className="mt-6 space-y-4">
+            {items.map((item) => (
+              <div key={`${item.id}-card`} className="rounded-[24px] border border-slate-200 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{item.id}</p>
+                    <h3 className="mt-2 text-lg font-semibold text-slate-950">{item.title}</h3>
+                  </div>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                      item.status
+                    )}`}
+                  >
+                    {item.status}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3 text-sm text-slate-600">
+                  <div className="rounded-2xl bg-slate-50 p-3">
+                    <p className="text-slate-400">Огноо</p>
+                    <p className="mt-1 font-medium text-slate-950">{item.date}</p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-3">
+                    <p className="text-slate-400">Байршил</p>
+                    <p className="mt-1 font-medium text-slate-950">{item.location}</p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-3">
+                    <p className="text-slate-400">Зохион байгуулагч</p>
+                    <p className="mt-1 font-medium text-slate-950">{item.organizer}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+    </EmployeeShell>
   );
 }
