@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { DirectorShell } from "../_components/director-shell";
+import { supabase, Task } from "@/lib/supabase";
 
 type TaskStatus = "Эхэлсэн" | "Зассан" | "Эсхийг" | "Дууссан";
 type TaskFilter = "all" | "in_progress" | "pending" | "completed";
@@ -107,19 +108,159 @@ function TaskDetailCard({ task }: { task: TaskItem }) {
 export default function DirectorTasksPage() {
   const [selectedId, setSelectedId] = useState(directorTasks[0].id);
   const [activeFilter, setActiveFilter] = useState<TaskFilter>("all");
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskData, setTaskData] = useState({
+    title: '',
+    description: '',
+    assignedTo: '',
+    dueDate: ''
+  });
+
+  // Manager-уудын жагсаалт
+  const [managers, setManagers] = useState([
+    { id: "manager1", name: "Менежер Бат", department: "Санхүү" },
+    { id: "manager2", name: "Менежер Тэмүүжин", department: "Хүн нөөц" },
+    { id: "manager3", name: "Менежер Саран", department: "Маркетинг" },
+    { id: "manager4", name: "Менежер Баяр", department: "Үйлдвэрлэл" },
+    { id: "manager5", name: "Менежер Оюун", department: "Худалдаа" },
+  ]);
+
+  // Database-ээс бүртгэлтэй менежерүүдийг авах
+  useEffect(() => {
+    fetchManagers();
+  }, []);
+
+  const fetchManagers = async () => {
+    try {
+      console.log('Director Tasks - Менежерүүдийг авах оролдлого...');
+      
+      const { data, error } = await supabase
+        .from('users')
+        .select('name, department')
+        .eq('role', 'manager')
+        .order('name');
+
+      if (error) {
+        console.error('Director Tasks - Менежерүүдийг авахад алдаа гарлаа:', error);
+        return;
+      }
+      
+      console.log('Director Tasks - Амжилттай авсан менежерүүд:', data);
+      
+      if (data && data.length > 0) {
+        const dbManagers = data.map((manager: any, index: number) => ({
+          id: `manager_${index + 1}`,
+          name: manager.name,
+          department: manager.department || 'Тодорхойгүй'
+        }));
+        setManagers(dbManagers);
+      }
+    } catch (error) {
+      console.error('Director Tasks - Менежерүүдийг авахад алдаа гарлаа:', error);
+    }
+  };
+
+  // Database-ээс tasks-ийг авах
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    try {
+      console.log('Director Tasks - Даалгавруудыг авах оролдлого...');
+      
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Director Tasks - Даалгавруудыг авахад алдаа гарлаа:', error);
+        return;
+      }
+      
+      console.log('Director Tasks - Амжилттай авсан даалгаврууд:', data);
+      setTasks(data || []);
+    } catch (error) {
+      console.error('Director Tasks - Даалгавруудыг авахад алдаа гарлаа:', error);
+    }
+  };
+
+  const handleCreateTask = async () => {
+    if (!taskData.title.trim()) {
+      alert('Даалгаврын гарчиг оруулна уу!');
+      return;
+    }
+
+    try {
+      console.log('Director Tasks - Даалгавар хадгалах оролдлого...', taskData);
+      console.log('Supabase URL:', (process.env as any).NEXT_PUBLIC_SUPABASE_URL);
+      
+      const insertData = {
+        task_id: `task_${Date.now()}`,
+        title: taskData.title,
+        description: taskData.description,
+        assigned_to: taskData.assignedTo,
+        due_date: taskData.dueDate,
+        status: 'Эхэлсэн',
+        created_by: 1 // Director ID
+      };
+      
+      console.log('Insert data:', insertData);
+      
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert(insertData);
+
+      console.log('Insert result:', { data, error });
+
+      if (error) {
+        console.error('Director Tasks - Даалгавар хадгалахад алдаа гарлаа:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        alert('Даалгавар хадгалахад алдаа гарлаа: ' + JSON.stringify(error));
+        return;
+      }
+      
+      console.log('Director Tasks - Даалгавар амжилттай хадгалагдлаа:', data);
+      alert('Даалгавар амжилттай үүсгэгдлээ!');
+      
+      setTaskData({ title: '', description: '', assignedTo: '', dueDate: '' });
+      setShowTaskForm(false);
+      fetchTasks();
+      
+    } catch (error) {
+      console.error('Director Tasks - Даалгавар үүсгэхэд алдаа гарлаа:', error);
+      console.error('Catch error details:', JSON.stringify(error, null, 2));
+      alert('Даалгавар үүсгэхэд алдаа гарлаа!');
+    }
+  };
 
   const filteredTasks = useMemo(() => {
+    // Database-ээс авсан tasks-ийг display хийх
+    const displayTasks = tasks.map((task: Task) => ({
+      id: task.task_id,
+      title: task.title,
+      status: (task.status === 'Эхэлсэн' ? 'Эхэлсэн' : 
+              task.status === 'Зассан' ? 'Зассан' : 
+              task.status === 'Эсхийг' ? 'Эсхийг' : 'Дууссан') as TaskStatus,
+      due: task.due_date || 'Тодорхойгүй',
+      owner: 'Директор Энх',
+      assignedBy: String(task.assigned_to) || 'Тодорхойгүй',
+      description: task.description || 'Тайлбар байхгүй'
+    }));
+
     if (activeFilter === "in_progress") {
-      return directorTasks.filter((task) => task.status === "Эхэлсэн" || task.status === "Зассан");
+      return displayTasks.filter((task) => task.status === "Эхэлсэн" || task.status === "Зассан");
     }
     if (activeFilter === "pending") {
-      return directorTasks.filter((task) => task.status === "Эсхийг");
+      return displayTasks.filter((task) => task.status === "Эсхийг");
     }
     if (activeFilter === "completed") {
-      return directorTasks.filter((task) => task.status === "Дууссан");
+      return displayTasks.filter((task) => task.status === "Дууссан");
     }
-    return directorTasks;
-  }, [activeFilter]);
+    return displayTasks;
+  }, [activeFilter, tasks]);
 
   const selectedItem = filteredTasks.find((item) => item.id === selectedId) ?? filteredTasks[0];
 
@@ -130,17 +271,30 @@ export default function DirectorTasksPage() {
       title="Директорын даалгаврууд"
       description="Стратегийн чухал даалгавруудыг хянаж, статусыг шинэчилж, багийн ажилтнуудад удирдамж өгнө."
       stats={[
-        { label: "Нийт даалгавар", value: "4" },
-        { label: "Идэвхтэй", value: "2" },
-        { label: "Хүлээгдэж буй", value: "1" },
+        { label: "Нийт даалгавар", value: String(tasks.length) },
+        { label: "Идэвхтэй", value: String(tasks.filter(t => t.status === 'Эхэлсэн' || t.status === 'Зассан').length) },
+        { label: "Хүлээгдэж буй", value: String(tasks.filter(t => t.status === 'Эсхийг').length) },
       ]}
       notifications={2}
       noteText="Шүүлтүүр ашиглаад идэвхтэй болон хүлээгдэж буй даалгавруудаа түрүүлж хараарай."
     >
       <section className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
         <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Жагсаалт</p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-950">{filteredTasks.length} даалгавар</h2>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Жагсаалт</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-950">{filteredTasks.length} даалгавар</h2>
+            </div>
+            <button
+              onClick={() => setShowTaskForm(true)}
+              className="rounded-full bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Шинэ даалгавар
+            </button>
+          </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
             {(Object.keys(filterLabels) as TaskFilter[]).map((filterKey) => (
@@ -243,6 +397,99 @@ export default function DirectorTasksPage() {
           </div>
         </article>
       </section>
+
+      {/* Шинэ даалгавар үүсгэх modal */}
+      {showTaskForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[30px] border border-slate-200 shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Шинэ бүртгэл</p>
+                  <h2 className="mt-2 text-2xl font-semibold text-slate-950">Даалгавар үүсгэх</h2>
+                </div>
+                <button
+                  onClick={() => setShowTaskForm(false)}
+                  className="rounded-full bg-slate-100 p-2 hover:bg-slate-200 transition-colors"
+                >
+                  <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Даалгаврын гарчиг</label>
+                  <input
+                    type="text"
+                    value={taskData.title}
+                    onChange={(e) => setTaskData({...taskData, title: e.target.value})}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Даалгаврын гарчиг оруулна уу"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Тайлбар</label>
+                  <textarea
+                    value={taskData.description}
+                    onChange={(e) => setTaskData({...taskData, description: e.target.value})}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows={4}
+                    placeholder="Даалгаврын талаар дэлгэрэнгүй тайлбар"
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Олгох менежер</label>
+                    <select
+                      value={taskData.assignedTo}
+                      onChange={(e) => setTaskData({...taskData, assignedTo: e.target.value})}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Менежер сонгох</option>
+                      {managers.map((manager) => (
+                        <option key={manager.id} value={manager.name}>
+                          {manager.name} ({manager.department})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Дуусах хугацаа</label>
+                    <input
+                      type="date"
+                      value={taskData.dueDate}
+                      onChange={(e) => setTaskData({...taskData, dueDate: e.target.value})}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={handleCreateTask}
+                    className="flex-1 rounded-xl bg-emerald-600 text-white px-6 py-3 font-medium hover:bg-emerald-700 transition-colors"
+                  >
+                    Даалгавар үүсгэх
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTaskData({ title: '', description: '', assignedTo: '', dueDate: '' });
+                      setShowTaskForm(false);
+                    }}
+                    className="flex-1 rounded-xl bg-red-600 text-white px-6 py-3 font-medium hover:bg-red-700 transition-colors"
+                  >
+                    Цуцлах
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </DirectorShell>
   );
 }

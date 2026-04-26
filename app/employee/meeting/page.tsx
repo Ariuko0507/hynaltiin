@@ -1,7 +1,9 @@
+//mployee/meeting/page.tsx//
 "use client";
 
 import { useState } from "react";
 import { EmployeeShell } from "../_components/employee-shell";
+import { title } from "process";
 
 type MeetingStatus = "Төлөвлөсөн" | "Баталгаажсан" | "Цуцлагдсан";
 
@@ -56,12 +58,16 @@ function getStatusClasses(status: MeetingStatus) {
 export default function EmployeeMeetingPage() {
   const [items, setItems] = useState(initialMeetingItems);
   const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'confirmed'>('all');
   const [newMeeting, setNewMeeting] = useState({
     title: "",
     status: "Төлөвлөсөн" as MeetingStatus,
     date: "",
     location: "",
   });
+
+  // Баталгаажсан хурлууд
+  const confirmedMeetings = items.filter(item => item.status === "Баталгаажсан");
 
   const handleSend = () => {
     if (!newMeeting.title || !newMeeting.date || !newMeeting.location) {
@@ -92,9 +98,8 @@ export default function EmployeeMeetingPage() {
         { label: "Энэ 7 хоног", value: "5" },
         { label: "Баталгаажсан", value: "3" },
         { label: "Төлөвлөсөн", value: "1" },
-        { label: "Цуцлагдсан", value: "0" },
+        { label: "Цуцлагдсан", value: "1" },
       ]}
-      notifications={3}
       action={
         <button
           type="button"
@@ -190,6 +195,85 @@ export default function EmployeeMeetingPage() {
         </section>
       ) : null}
 
+      {/* Таб хэсэг */}
+      <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Хурлын ангилал</p>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-950">Хурал, уулзалт</h2>
+          </div>
+          <div className="flex rounded-2xl bg-slate-100 p-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab('all')}
+              className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                activeTab === 'all'
+                  ? 'bg-white text-slate-950 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-950'
+              }`}
+            >
+              Бүх хурал ({items.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('confirmed')}
+              className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                activeTab === 'confirmed'
+                  ? 'bg-white text-slate-950 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-950'
+              }`}
+            >
+              Баталгаажсан ({confirmedMeetings.length})
+            </button>
+          </div>
+        </div>
+
+        {/* Таб контент */}
+        <div className="overflow-hidden rounded-[24px] border border-slate-200">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Код</th>
+                  <th className="px-4 py-3 font-medium">Гарчиг</th>
+                  <th className="px-4 py-3 font-medium">Зохион байгуулагч</th>
+                  <th className="px-4 py-3 font-medium">Огноо</th>
+                  <th className="px-4 py-3 font-medium">Төлөв</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 bg-white">
+                {(activeTab === 'all' ? items : confirmedMeetings).map((item) => (
+                  <tr key={item.id}>
+                    <td className="px-4 py-4 font-medium text-slate-950">{item.id}</td>
+                    <td className="px-4 py-4 text-slate-700">
+                      <p className="font-medium text-slate-950">{item.title}</p>
+                      <p className="mt-1 text-xs text-slate-500">{item.location}</p>
+                    </td>
+                    <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
+                    <td className="px-4 py-4 text-slate-700">{item.date}</td>
+                    <td className="px-4 py-4">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                          item.status
+                        )}`}
+                      >
+                        {item.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {activeTab === 'confirmed' && confirmedMeetings.length === 0 && (
+          <div className="mt-4 rounded-2xl bg-slate-50 p-6 text-center">
+            <p className="text-sm text-slate-600">Баталгаажсан хурал олдсонгүй</p>
+          </div>
+        )}
+      </section>
+
       <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Хуваарь</p>
@@ -231,46 +315,6 @@ export default function EmployeeMeetingPage() {
                 </tbody>
               </table>
             </div>
-          </div>
-        </article>
-
-        <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Товч карт</p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Хурал бүрийн мэдээлэл</h2>
-
-          <div className="mt-6 space-y-4">
-            {items.map((item) => (
-              <div key={`${item.id}-card`} className="rounded-[24px] border border-slate-200 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{item.id}</p>
-                    <h3 className="mt-2 text-lg font-semibold text-slate-950">{item.title}</h3>
-                  </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
-                      item.status
-                    )}`}
-                  >
-                    {item.status}
-                  </span>
-                </div>
-
-                <div className="mt-4 grid gap-3 text-sm text-slate-600">
-                  <div className="rounded-2xl bg-slate-50 p-3">
-                    <p className="text-slate-400">Огноо</p>
-                    <p className="mt-1 font-medium text-slate-950">{item.date}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-50 p-3">
-                    <p className="text-slate-400">Байршил</p>
-                    <p className="mt-1 font-medium text-slate-950">{item.location}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-50 p-3">
-                    <p className="text-slate-400">Зохион байгуулагч</p>
-                    <p className="mt-1 font-medium text-slate-950">{item.organizer}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </article>
       </section>

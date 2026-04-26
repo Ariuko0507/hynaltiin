@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { EmployeeShell } from "../_components/employee-shell";
 
 type AssignmentStatus = "Хүлээгдэж байна" | "Ажиллаж байна" | "Хоцорсон" | "Дууссан";
 type PersonalAssignment = {
@@ -137,46 +136,40 @@ export default function EmployeeDashboardPage() {
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-950">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
         <aside className="hidden w-72 shrink-0 border-r border-slate-200/80 bg-white/80 px-6 py-8 backdrop-blur lg:block">
-          <EmployeeShell
-            currentPath="/employee/dashboard"
-            kicker="Employee"
-            title="Ажилтны самбар"
-            description="Өөрийн мэдээлэл, хийх ажил, багийн явцыг нэг дороос харна."
-            stats={[
-              { label: "Нийт даалгавар", value: "8" },
-              { label: "Хийгдэж буй", value: "3" },
-              { label: "Хүлээгдэж буй", value: "2" },
-              { label: "Дууссан", value: "3" },
-            ]}
-            notifications={3}
-          >
-            <nav className="mt-8 space-y-2">
-              {sidebarLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                    link.href === "/employee/dashboard"
-                      ? "bg-slate-950 text-white shadow-lg"
-                      : "text-slate-600 hover:bg-white hover:text-slate-950"
-                  }`}
-                >
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-current/20 text-[11px] font-semibold">
-                    {link.icon}
-                  </span>
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
+          <div className="rounded-[28px] bg-slate-950 px-5 py-6 text-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-300">Employee</p>
+            <h2 className="mt-3 text-2xl font-semibold">Ажилтны самбар</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Өөрийн мэдээлэл, хийх ажил, багийн явцыг нэг дороос харна.
+            </p>
+          </div>
 
-            <div className="mt-8 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Анхаарах</p>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                Хоцорсон ажлын биелэлтийг эхэлж шинэчилж, дараа нь хүргүүлэх байршил болон
-                хүлээн авагчийг шалгаарай.
-              </p>
-            </div>
-          </EmployeeShell>
+          <nav className="mt-8 space-y-2">
+            {sidebarLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                  link.href === "/employee/dashboard"
+                    ? "bg-slate-950 text-white shadow-lg"
+                    : "text-slate-600 hover:bg-white hover:text-slate-950"
+                }`}
+              >
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-current/20 text-[11px] font-semibold">
+                  {link.icon}
+                </span>
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="mt-8 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Анхаарах</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Хоцорсон ажлын биелэлтийг эхэлж шинэчилж, дараа нь хүргүүлэх байршил болон
+              хүлээн авагчийг шалгаарай.
+            </p>
+          </div>
         </aside>
 
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">

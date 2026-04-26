@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DirectorShell } from "../_components/director-shell";
+import { supabase } from "@/lib/supabase";
 
 type MeetingStatus = "Төлөвлөсөн" | "Баталгаажсан" | "Цуцлагдсан";
 
@@ -57,25 +58,194 @@ export default function DirectorMeetingPage() {
     status: "Төлөвлөсөн" as MeetingStatus,
     date: "",
     location: "",
+    participants: [] as string[],
   });
 
-  const handleSend = () => {
+  // Статистик тооцоолох
+  const meetingStats = useMemo(() => {
+    const thisWeek = items.filter(item => {
+      const meetingDate = new Date(item.date);
+      const today = new Date();
+      const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      return meetingDate >= today && meetingDate <= weekFromNow;
+    }).length;
+    
+    const confirmed = items.filter(item => item.status === 'Баталгаажсан').length;
+    const planned = items.filter(item => item.status === 'Төлөвлөсөн').length;
+    const cancelled = items.filter(item => item.status === 'Цуцлагдсан').length;
+    
+    return [
+      { label: "Энэ 7 хоног", value: thisWeek.toString() },
+      { label: "Баталгаажсан", value: confirmed.toString() },
+      { label: "Төлөвлөсөн", value: planned.toString() },
+      { label: "Цуцлагдсан", value: cancelled.toString() },
+    ];
+  }, [items]);
+
+  // Database-ээс manager-уудыг авах
+  const [managers, setManagers] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchManagers();
+  }, []);
+
+  const fetchManagers = async () => {
+    try {
+      console.log('Director - Manager-уудыг авах оролдлого...');
+      
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, department')
+        .eq('role', 'manager')
+        .order('name');
+      
+      if (error) {
+        console.error('Director - Manager-уудыг авахад алдаа гарлаа:', error);
+        // Fallback data
+        setManagers([
+          { id: "manager1", name: "Менежер Бат", department: "Санхүү" },
+          { id: "manager2", name: "Менежер Тэмүүжин", department: "Хүн нөөц" },
+          { id: "manager3", name: "Менежер Саран", department: "Маркетинг" },
+          { id: "manager4", name: "Менежер Баяр", department: "Үйлдвэрлэл" },
+          { id: "manager5", name: "Менежер Оюун", department: "Худалдаа" },
+        ]);
+        return;
+      }
+      
+      console.log('Director - Амжилттай авсан manager-ууд:', data);
+      setManagers(data || []);
+    } catch (error) {
+      console.error('Director - Manager-уудыг авахад алдаа гарлаа:', error);
+      // Fallback data
+      setManagers([
+        { id: "manager1", name: "Менежер Бат", department: "Санхүү" },
+        { id: "manager2", name: "Менежер Тэмүүжин", department: "Хүн нөөц" },
+        { id: "manager3", name: "Менежер Саран", department: "Маркетинг" },
+        { id: "manager4", name: "Менежер Баяр", department: "Үйлдвэрлэл" },
+        { id: "manager5", name: "Менежер Оюун", department: "Худалдаа" },
+      ]);
+    }
+  };
+
+  const handleParticipantToggle = (managerId: string) => {
+    setNewMeeting(prev => ({
+      ...prev,
+      participants: prev.participants.includes(managerId)
+        ? prev.participants.filter(id => id !== managerId)
+        : [...prev.participants, managerId]
+    }));
+  };
+
+  // Database-ээс хурлуудыг авах
+  useEffect(() => {
+    fetchMeetings();
+  }, []);
+
+  const fetchMeetings = async () => {
+    try {
+      console.log('Meeting page - Хурлуудыг авах оролдлого...');
+      console.log('Supabase URL:', (process.env as any).NEXT_PUBLIC_SUPABASE_URL);
+      
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      console.log('Fetch result:', { data, error });
+      
+      if (error) {
+        console.error('Meeting page - Хурлуудыг авахад алдаа гарлаа:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        // Хэрэв database алдаа гарвал initial data хэрэглэх
+        return;
+      }
+      
+      console.log('Meeting page - Амжилттай авсан хурлууд:', data);
+      
+      // Database-ийн өгөгдлийг MeetingItem format руу хөрвүүлэх
+      if (data && data.length > 0) {
+        const formattedItems: MeetingItem[] = data.map((meeting: any, index: number) => ({
+          id: meeting.meeting_id || `M-${String(index + 1).padStart(3, "0")}`,
+          title: meeting.title,
+          status: meeting.status === 'scheduled' ? 'Төлөвлөсөн' : 
+                  meeting.status === 'completed' ? 'Баталгаажсан' : 'Цуцлагдсан',
+          organizer: meeting.participants || 'Директор Энх',
+          date: meeting.meeting_date ? `${meeting.meeting_date} ${meeting.meeting_time || '00:00'}` : meeting.date,
+          location: 'Төв байр, хурлын танхим'
+        }));
+        
+        setItems(formattedItems);
+      }
+    } catch (error) {
+      console.error('Meeting page - Хурлуудыг авахад алдаа гарлаа:', error);
+      console.error('Catch error details:', JSON.stringify(error, null, 2));
+    }
+  };
+
+  const handleSend = async () => {
     if (!newMeeting.title || !newMeeting.date || !newMeeting.location) {
+      alert('Бүх талбарыг бөглөнө үү!');
       return;
     }
 
-    const newItem: MeetingItem = {
-      id: `M-${String(items.length + 1).padStart(3, "0")}`,
-      title: newMeeting.title,
-      status: newMeeting.status,
-      organizer: "Директор Энх",
-      date: newMeeting.date,
-      location: newMeeting.location,
-    };
+    try {
+      console.log('Meeting page - Хурал хадгалах оролдлого...', newMeeting);
+      
+      const meetingData = {
+        meeting_id: `meeting_${Date.now()}`,
+        title: newMeeting.title,
+        description: '',
+        meeting_date: newMeeting.date.split(' ')[0],
+        meeting_time: newMeeting.date.split(' ')[1] || '10:00',
+        participants: newMeeting.participants.length > 0 
+          ? newMeeting.participants.map(id => 
+              managers.find(m => m.id === id)?.name || ''
+            ).join(', ')
+          : 'Директор Энх',
+        status: newMeeting.status === 'Төлөвлөсөн' ? 'scheduled' : 
+                newMeeting.status === 'Баталгаажсан' ? 'completed' : 'cancelled',
+        organizer: 1
+      };
+      
+      console.log('Meeting page - Insert data:', meetingData);
+      
+      // Database-д хурал хадгалах
+      const { data, error } = await supabase
+        .from('meetings')
+        .insert(meetingData);
 
-    setItems((current) => [...current, newItem]);
-    setNewMeeting({ title: "", status: "Төлөвлөсөн", date: "", location: "" });
-    setShowForm(false);
+      console.log('Meeting page - Insert result:', { data, error });
+
+      if (error) {
+        console.error('Meeting page - Хурал хадгалахад алдаа гарлаа:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        // Хэрэв database алдаа гарвал local state дээр нэмэх
+        const newItem: MeetingItem = {
+          id: `M-${String(items.length + 1).padStart(3, "0")}`,
+          title: newMeeting.title,
+          status: newMeeting.status,
+          organizer: "Директор Энх",
+          date: newMeeting.date,
+          location: newMeeting.location,
+        };
+
+        setItems((current) => [...current, newItem]);
+        alert('Хурал амжилттай үүсгэгдлээ (local state)!');
+      } else {
+        console.log('Meeting page - Хурал амжилттай хадгалагдлаа:', data);
+        alert('Хурал амжилттай үүсгэгдлээ!');
+        
+        // Хурлын жагсаалтыг шинэчлэх
+        fetchMeetings();
+      }
+
+      setNewMeeting({ title: "", status: "Төлөвлөсөн", date: "", location: "", participants: [] });
+      setShowForm(false);
+      
+    } catch (error) {
+      console.error('Meeting page - Хурал үүсгэхэд алдаа гарлаа:', error);
+      alert('Хурал үүсгэхэд алдаа гарлаа!');
+    }
   };
 
   return (
@@ -84,18 +254,13 @@ export default function DirectorMeetingPage() {
       kicker="Meetings"
       title="Хурал, уулзалтын хуваарь"
       description="Өөрийн оролцох хурал, зохион байгуулагч, хугацаа болон байршлыг нэг ижил загвартайгаар харж, шаардлагатай үед шинэ уулзалт үүсгэнэ."
-      stats={[
-        { label: "Энэ 7 хоног", value: "5" },
-        { label: "Баталгаажсан", value: "3" },
-        { label: "Төлөвлөсөн", value: "1" },
-        { label: "Цуцлагдсан", value: "0" },
-      ]}
+      stats={meetingStats}
       notifications={2}
       action={
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+          className="inline-flex rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition-all hover:bg-slate-100 hover:shadow-lg"
         >
           Хурал үүсгэх
         </button>
@@ -155,7 +320,7 @@ export default function DirectorMeetingPage() {
               />
             </label>
           </div>
-
+          
           <div className="mt-6 flex flex-wrap gap-3">
             <button
               type="button"
@@ -215,41 +380,6 @@ export default function DirectorMeetingPage() {
           </div>
         </article>
 
-        <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Товч карт</p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Хурал бүрийн мэдээлэл</h2>
-
-          <div className="mt-6 space-y-4">
-            {items.map((item) => (
-              <div key={`${item.id}-card`} className="rounded-[24px] border border-slate-200 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.24em] text-slate-400">{item.id}</p>
-                    <h3 className="mt-2 text-lg font-semibold text-slate-950">{item.title}</h3>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(item.status)}`}>
-                    {item.status}
-                  </span>
-                </div>
-
-                <div className="mt-4 grid gap-3 text-sm text-slate-600">
-                  <div className="rounded-2xl bg-slate-50 p-3">
-                    <p className="text-slate-400">Огноо</p>
-                    <p className="mt-1 font-medium text-slate-950">{item.date}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-50 p-3">
-                    <p className="text-slate-400">Байршил</p>
-                    <p className="mt-1 font-medium text-slate-950">{item.location}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-50 p-3">
-                    <p className="text-slate-400">Зохион байгуулагч</p>
-                    <p className="mt-1 font-medium text-slate-950">{item.organizer}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
       </section>
     </DirectorShell>
   );

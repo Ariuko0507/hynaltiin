@@ -16,7 +16,6 @@ type EmployeeShellProps = {
   action?: ReactNode;
   noteTitle?: string;
   noteText?: string;
-  notifications?: number;
 };
 
 const sidebarLinks = [
@@ -36,29 +35,14 @@ export function EmployeeShell({
   action,
   noteTitle = "Анхаарах",
   noteText = "Өөрийн даалгаврын хугацаа болон багийн мэдээллийг тогтмол шинэчилж байгаарай.",
-  notifications = 0,
 }: EmployeeShellProps) {
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-950">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
         <aside className="hidden w-72 shrink-0 border-r border-slate-200/80 bg-white/80 px-6 py-8 backdrop-blur lg:block">
           <div className="rounded-[28px] bg-slate-950 px-5 py-6 text-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-slate-300">Employee</p>
-                <h2 className="mt-3 text-2xl font-semibold">Ажилтны самбар</h2>
-              </div>
-              <Link href="/employee/notifications" className="relative rounded-full bg-white/10 p-2 hover:bg-white/20 transition">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                {notifications > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold">
-                    {notifications > 99 ? "99+" : notifications}
-                  </span>
-                )}
-              </Link>
-            </div>
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-300">Employee</p>
+            <h2 className="mt-3 text-2xl font-semibold">Ажилтны самбар</h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
               Өөрийн мэдээлэл, хийх ажил, багийн явцыг нэг дороос харна.
             </p>
