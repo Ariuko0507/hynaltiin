@@ -247,6 +247,21 @@ CREATE TABLE fulfillments (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Fulfillment comments table (биелүүлэлтийн сэтгэгдэл)
+CREATE TABLE fulfillment_comments (
+    id SERIAL PRIMARY KEY,
+    fulfillment_id VARCHAR(30) NOT NULL,
+    author VARCHAR(255) NOT NULL,
+    role VARCHAR(100) NOT NULL,
+    text TEXT NOT NULL,
+    parent_id INTEGER REFERENCES fulfillment_comments(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index for faster queries
+CREATE INDEX idx_fulfillment_comments_fulfillment_id ON fulfillment_comments(fulfillment_id);
+CREATE INDEX idx_fulfillment_comments_parent_id ON fulfillment_comments(parent_id);
+
 -- Notifications table (мэдэгдэл)
 CREATE TABLE notifications (
     id SERIAL PRIMARY KEY,

@@ -54,3 +54,24 @@ export interface Meeting {
   created_at: string
   updated_at: string
 }
+
+export interface FulfillmentComment {
+  id: number
+  fulfillment_id: string
+  author: string
+  role: string
+  text: string
+  parent_id?: number | null
+  created_at: string
+}
+
+export interface FulfillmentWithComments {
+  id: string
+  title: string
+  status: 'Ноорог' | 'Хадгалсан' | 'Илгээсэн'
+  from_role: 'Менежер' | 'Ажилтан'
+  from_name: string
+  sent_to: string
+  sent_date: string
+  comments: FulfillmentComment[]
+}
