@@ -107,32 +107,86 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
+    
+    console.log('DELETE API called with id:', id)
+    console.log('Environment check:', {
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasAnonKey: !!process.env.SUPABASE_ANON_KEY || !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      hasUrl: !!process.env.SUPABASE_URL || !!process.env.NEXT_PUBLIC_SUPABASE_URL
+    })
 
     if (!id) {
+      console.log('DELETE: No id provided')
       return NextResponse.json(
         { error: 'id is required' },
         { status: 400 }
       )
     }
 
-    const { error } = await supabaseServer
+    const numericId = parseInt(id)
+    if (isNaN(numericId)) {
+      console.log('DELETE: Invalid id format:', id)
+      return NextResponse.json(
+        { error: 'Invalid id format' },
+        { status: 400 }
+      )
+    }
+    console.log('DELETE: Parsed id:', numericId)
+
+    // First check if comment exists
+    const { data: existing, error: fetchError } = await supabaseServer
+      .from('fulfillment_comments')
+      .select('id, parent_id, fulfillment_id')
+      .eq('id', numericId)
+      .single()
+    
+    console.log('DELETE: Existing comment:', existing, 'Error:', fetchError)
+
+    if (fetchError || !existing) {
+      return NextResponse.json(
+        { error: 'Comment not found', details: fetchError?.message },
+        { status: 404 }
+      )
+    }
+
+    // If it's a parent comment (not a reply), delete replies first
+    if (!existing.parent_id) {
+      console.log('DELETE: This is a parent comment, deleting replies first...')
+      const { error: replyError } = await supabaseServer
+        .from('fulfillment_comments')
+        .delete()
+        .eq('parent_id', numericId)
+      
+      if (replyError) {
+        console.log('DELETE: Error deleting replies:', replyError)
+      } else {
+        console.log('DELETE: Replies deleted successfully')
+      }
+    }
+
+    // Now delete the comment itself
+    const { data, error } = await supabaseServer
       .from('fulfillment_comments')
       .delete()
-      .eq('id', parseInt(id))
+      .eq('id', numericId)
+      .select()
+
+    console.log('DELETE: Supabase delete result:', { data, error })
 
     if (error) {
       console.error('Error deleting comment:', error)
       return NextResponse.json(
-        { error: 'Failed to delete comment' },
+        { error: 'Failed to delete comment', details: error.message, code: error.code },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ success: true }, { status: 200 })
+    console.log('DELETE: Success, rows deleted:', data?.length || 0)
+    return NextResponse.json({ success: true, deleted: data?.length || 0 }, { status: 200 })
   } catch (err) {
-    console.error('Unexpected error:', err)
+    console.error('Unexpected error in DELETE:', err)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: String(err) },
       { status: 500 }
     )
   }

@@ -367,6 +367,7 @@ export default function EmployeeFulfillmentPage() {
         { label: "Ноорог", value: "2" },
         { label: "Хадгалсан", value: "2" },
       ]}
+      notifications={3}
       noteText="Хүснэгтийн мэдээллээ хоосноос эхэлж бөглөөд хадгал. Дараа нь хадгалсан хувилбаруудаас зөвийг нь сонгож илгээнэ."
     >
       {message ? (

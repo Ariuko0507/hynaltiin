@@ -269,6 +269,7 @@ CREATE TABLE notifications (
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
     type VARCHAR(50) NOT NULL CHECK (type IN ('info', 'warning', 'alert', 'success')),
+    link VARCHAR(500),
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -314,6 +315,25 @@ INSERT INTO users (name, email, password_hash, role_id, department_id, phone, st
 ('Директор Энх', 'director@example.com', 'hash2', 2, 2, '+976-90000002', 'active'),
 ('Менежер Тэмүүжин', 'manager@example.com', 'hash3', 3, 3, '+976-90000003', 'active'),
 ('Ажилтан Сарнай', 'employee@example.com', 'hash4', 4, 4, '+976-90000004', 'active');
+
+-- Sample notifications for Director (user_id = 2)
+INSERT INTO notifications (user_id, title, message, type, link, is_read, created_at) VALUES
+(2, 'Шинэ биелэлт ирлээ', 'Менежер Тэмүүжин F-003 биелэлтийг илгээв.', 'info', '/director/fulfillment?fulfillment_id=F-003', false, '2026-04-26 10:30:00'),
+(2, 'Хурал эхлэх гэж байна', 'Төслийн тойм хурал 15 минутын дараа эхэлнэ.', 'warning', '/director/meeting', false, '2026-04-26 14:45:00'),
+(2, 'Даалгавар батлагдлаа', 'Баталгаатай даалгавар D-104.', 'success', '/director/tasks', true, '2026-04-25 09:00:00');
+
+-- Sample notifications for Manager (user_id = 3)
+INSERT INTO notifications (user_id, title, message, type, link, is_read, created_at) VALUES
+(3, 'Шинэ даалгавар өгөгдлөө', 'Директор Энх танаас шинэ даалгавар өглөө.', 'info', '/manager/tasks', false, '2026-04-26 11:00:00'),
+(3, 'Багийн гишүүн биелэлт илгээв', 'Бат F-004 биелэлтийг илгээв.', 'success', '/manager/fulfillment?fulfillment_id=F-004', false, '2026-04-26 13:20:00'),
+(3, 'Хугацаа дуусах гэж байна', 'M-301 даалгаварын хугацаа маргааш дуусна.', 'warning', '/manager/tasks', true, '2026-04-26 16:00:00');
+
+-- Sample notifications for Employee (user_id = 4)
+INSERT INTO notifications (user_id, title, message, type, link, is_read, created_at) VALUES
+(4, 'Шинэ даалгавар ирлээ', 'Менежер Тэмүүжин танаас E-501 даалгавар өглөө.', 'info', '/employee/tasks', false, '2026-04-26 09:00:00'),
+(4, 'Хуралд урив', 'Таныг багийн хуралд оролцохыг урьж байна.', 'info', '/employee/meeting', false, '2026-04-26 10:15:00'),
+(4, 'Биелэлт батлагдлаа', 'Таны илгээсэн F-002 биелэлт батлагдлаа.', 'success', '/employee/fulfillment?fulfillment_id=F-002', true, '2026-04-25 15:30:00'),
+(4, 'Хугацаа сануулга', 'E-502 даалгаварын хугацаа маргааш дуусна.', 'warning', '/employee/tasks', false, '2026-04-26 17:00:00');
 
 INSERT INTO training_programs (program_code, title, description, level, duration_days, created_by, status) VALUES
 ('TP-001', 'Менежментийн үндэс', 'Менежмент, харилцаа, удирдлагын сургалт', 'beginner', 20, 2, 'published'),

@@ -513,12 +513,18 @@ export default function DirectorFulfillmentPage() {
   };
 
   const handleDeleteComment = async (commentId: string, isReply: boolean = false, parentId?: string) => {
-    if (!selectedId) return;
+    console.log('Delete clicked:', commentId, 'selectedId:', selectedId);
+    if (!selectedId) {
+      console.log('No selectedId, returning');
+      return;
+    }
 
     try {
+      console.log('Making DELETE request for id:', commentId);
       const response = await fetch(`/api/comments?id=${commentId}`, {
         method: 'DELETE',
       });
+      console.log('Delete response:', response.status, response.ok);
 
       if (response.ok) {
         setFulfillments((current) =>
@@ -622,6 +628,7 @@ export default function DirectorFulfillmentPage() {
         { label: "Менежер", value: String(fulfillments.filter((i) => i.fromRole === "Менежер").length) },
         { label: "Ажилтан", value: String(fulfillments.filter((i) => i.fromRole === "Ажилтан").length) },
       ]}
+      notifications={2}
       noteText="Менежер болон ажилтнуудын биелэлтийг хянаж, засвартай баталгаажуулна. Сэтгэгдэл бичих боломжтой."
     >
       {message ? (

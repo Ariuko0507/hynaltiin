@@ -31,10 +31,16 @@ export default function DirectorDashboardPage() {
   return (
     <DirectorShell
       currentPath="/director/dashboard"
-      kicker="Dashboard"
-      title="Директор Энх, компани стратеги, гүйцэтгэл, төслийн тойм"
-      description="Та стратегийн зорилтууд, төсвийн гүйцэтгэл, түншлэлийн хөгжил, багийн ажилтнуудын явцыг нэг дэлгэцээс хянах боломжтой."
-      stats={quickStats}
+      kicker="Director"
+      title="Директорын самбар"
+      description="Стратеги, гүйцэтгэл, төслийн тоймыг нэг дороос хянах."
+      stats={[
+        { label: "Нийт төсөл", value: "12" },
+        { label: "Идэвхтэй", value: "8" },
+        { label: "Биелэлт хүлээж буй", value: "3" },
+        { label: "Хурал", value: "5" },
+      ]}
+      notifications={2}
     >
       <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <div className="space-y-6">

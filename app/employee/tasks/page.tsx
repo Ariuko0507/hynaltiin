@@ -180,13 +180,14 @@ export default function EmployeeTasksPage() {
       currentPath="/employee/tasks"
       kicker="Tasks"
       title="Ажилтанд оноосон даалгаврууд"
-      description="Танд ирсэн ажлуудыг шүүж햞аад, хэн өгсөн, хэзээ дуусгах, хаана хэнд өгөх мэдээллийг нэг дороос харна."
+      description="Танд ирсэн ажлуудыг шүүжхээд, хэн өгсөн, хэзээ дуусгах, хаана хэнд өгөх мэдээллийг нэг дороос харна."
       stats={[
         { label: "Нийт ажил", value: "12" },
         { label: "Ид явж буй", value: "4" },
         { label: "Хоцорсон", value: "1" },
-        { label: "Дууссан", value: "7" },
+        { label: "Яаралтай", value: "2" },
       ]}
+      notifications={3}
       noteText="Шүүлтүүр ашиглаад яаралтай болон хоцорсон ажлаа түрүүлж хараарай."
     >
       <section className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">

@@ -38,3 +38,31 @@ CREATE POLICY "Allow update access to all users"
 --   FOR DELETE 
 --   TO authenticated 
 --   USING (true);
+
+-- Enable RLS on notifications table
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+-- Allow anyone to read notifications (for demo purposes)
+CREATE POLICY "Allow read access to all users on notifications" 
+  ON notifications 
+  FOR SELECT 
+  USING (true);
+
+-- Allow anyone to insert notifications (for demo purposes)
+CREATE POLICY "Allow insert access to all users on notifications" 
+  ON notifications 
+  FOR INSERT 
+  WITH CHECK (true);
+
+-- Allow anyone to update notifications (for demo purposes)
+CREATE POLICY "Allow update access to all users on notifications" 
+  ON notifications 
+  FOR UPDATE 
+  USING (true)
+  WITH CHECK (true);
+
+-- Allow anyone to delete notifications (for demo purposes)
+CREATE POLICY "Allow delete access to all users on notifications" 
+  ON notifications 
+  FOR DELETE 
+  USING (true);

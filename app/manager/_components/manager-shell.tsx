@@ -6,7 +6,7 @@ type ShellStat = {
   value: string;
 };
 
-type DirectorShellProps = {
+type ManagerShellProps = {
   currentPath: string;
   kicker: string;
   title: string;
@@ -20,13 +20,13 @@ type DirectorShellProps = {
 };
 
 const sidebarLinks = [
-  { href: "/director/dashboard", label: "Самбар", icon: "DS" },
-  { href: "/director/tasks", label: "Даалгавар", icon: "TK" },
-  { href: "/director/fulfillment", label: "Биелэлт", icon: "FL" },
-  { href: "/director/meeting", label: "Хурал", icon: "MT" },
+  { href: "/manager/dashboard", label: "Самбар", icon: "MG" },
+  { href: "/manager/tasks", label: "Даалгавар", icon: "TK" },
+  { href: "/manager/fulfillment", label: "Биелэлт", icon: "FL" },
+  { href: "/manager/meeting", label: "Хурал", icon: "MT" },
 ];
 
-export function DirectorShell({
+export function ManagerShell({
   currentPath,
   kicker,
   title,
@@ -35,9 +35,9 @@ export function DirectorShell({
   stats = [],
   action,
   noteTitle = "Анхаарах",
-  noteText = "Стратегийн зорилтууд, төсвийн гүйцэтгэл, түншлэлийн хөгжлийг тогтмол хянаж байгаарай.",
+  noteText = "Багийн гүйцэтгэл, төслийн явц, хурлын тоймыг тогтмол хянаж байгаарай.",
   notifications = 0,
-}: DirectorShellProps) {
+}: ManagerShellProps) {
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-950">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
@@ -45,10 +45,10 @@ export function DirectorShell({
           <div className="rounded-[28px] bg-slate-950 px-5 py-6 text-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-slate-300">Director</p>
-                <h2 className="mt-3 text-2xl font-semibold">Директорын самбар</h2>
+                <p className="text-xs uppercase tracking-[0.35em] text-slate-300">Manager</p>
+                <h2 className="mt-3 text-2xl font-semibold">Менежерийн самбар</h2>
               </div>
-              <Link href="/director/notifications" className="relative rounded-full bg-white/10 p-2 hover:bg-white/20 transition">
+              <Link href="/manager/notifications" className="relative rounded-full bg-white/10 p-2 hover:bg-white/20 transition">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
@@ -60,7 +60,7 @@ export function DirectorShell({
               </Link>
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              Стратеги, гүйцэтгэл, төслийн тоймыг нэг дороос хянах.
+              Багийн ажил, төсөл, гүйцэтгэлийг хянах.
             </p>
           </div>
 

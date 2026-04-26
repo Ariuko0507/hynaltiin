@@ -133,8 +133,8 @@ export default function DirectorTasksPage() {
         { label: "Нийт даалгавар", value: "4" },
         { label: "Идэвхтэй", value: "2" },
         { label: "Хүлээгдэж буй", value: "1" },
-        { label: "Дууссан", value: "1" },
       ]}
+      notifications={2}
       noteText="Шүүлтүүр ашиглаад идэвхтэй болон хүлээгдэж буй даалгавруудаа түрүүлж хараарай."
     >
       <section className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">

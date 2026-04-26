@@ -88,8 +88,9 @@ export default function DirectorMeetingPage() {
         { label: "Энэ 7 хоног", value: "5" },
         { label: "Баталгаажсан", value: "3" },
         { label: "Төлөвлөсөн", value: "1" },
-        { label: "Цуцлагдсан", value: "1" },
+        { label: "Цуцлагдсан", value: "0" },
       ]}
+      notifications={2}
       action={
         <button
           type="button"
