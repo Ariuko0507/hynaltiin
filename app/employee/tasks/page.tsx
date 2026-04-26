@@ -84,10 +84,10 @@ const incomingTasks: TaskItem[] = [
 ];
 
 const filterLabels: Record<TaskFilter, string> = {
-  urgent: "Яаралтай",
-  overdue: "Хоцорсон",
-  in_progress: "Хийгдэж байгаа",
   all: "Бүгд",
+  urgent: "Яаралтай",
+  in_progress: "Хийгдэж байгаа",
+  overdue: "Хоцорсон",
 };
 
 function getStatusClasses(status: TaskStatus) {
