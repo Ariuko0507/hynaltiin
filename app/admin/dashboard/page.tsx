@@ -12,27 +12,6 @@ type AdminInfo = {
 };
 
 async function getAdminInfo(): Promise<AdminInfo> {
-  if (!supabase) {
-    console.warn("Supabase not configured, using fallback data");
-    return {
-      name: "Админ Бат",
-      email: "admin@example.com",
-      role: "Системийн админ",
-      department: "IT удирдлага",
-      lastLogin: new Date().toLocaleString("mn-MN"),
-      permissions: [
-        "Хэрэглэгчийн эрх удирдах",
-        "Системийн тохиргоог өөрчлөх",
-        "Аудит ба тайлан үүсгэх",
-        "Өгөгдлийг нөөцлөх болон сэргээх",
-      ],
-      alerts: [
-        "Supabase тохиргоог хийнэ үү",
-        "Системийн шинэчлэлт иргэддээ зарлах.",
-      ],
-    };
-  }
-
   // Get admin user (assuming first admin user)
   const { data: adminUser, error: userError } = await supabase
     .from("users")

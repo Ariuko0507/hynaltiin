@@ -1,21 +1,10 @@
 // lib/supabase.ts
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = (process.env as any).NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = (process.env as any).NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = (process.env as any).NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const supabaseAnonKey = (process.env as any).NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
-// Check if environment variables are properly configured
-const isConfigured = supabaseUrl &&
-                     supabaseAnonKey &&
-                     supabaseUrl !== 'your_supabase_project_url_here' &&
-                     supabaseAnonKey !== 'your_supabase_anon_key_here' &&
-                     supabaseUrl.startsWith('https://')
-
-export const supabase = isConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null
-
-export const isSupabaseConfigured = () => isConfigured
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Database types (TypeScript interfaces)
 export interface User {
