@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { DirectorShell } from "../_components/director-shell";
+import { VoiceRecorder } from "@/app/_components/voice-recorder";
+import { VoiceRecorderSimple } from "@/app/_components/voice-recorder-simple";
 import { supabase } from "@/lib/supabase";
 
 type MeetingStatus = "Төлөвлөсөн" | "Баталгаажсан" | "Цуцлагдсан";
@@ -53,6 +55,7 @@ const initialMeetingItems: MeetingItem[] = [
 export default function DirectorMeetingPage() {
   const [items, setItems] = useState(initialMeetingItems);
   const [showForm, setShowForm] = useState(false);
+  const [selectedMeeting, setSelectedMeeting] = useState<MeetingItem | null>(null);
   const [newMeeting, setNewMeeting] = useState({
     title: "",
     status: "Төлөвлөсөн" as MeetingStatus,
@@ -93,36 +96,39 @@ export default function DirectorMeetingPage() {
     try {
       console.log('Director - Manager-уудыг авах оролдлого...');
       
+      // Fetch all users (role column doesn't exist, filter manually)
       const { data, error } = await supabase
         .from('users')
-        .select('id, name, department')
-        .eq('role', 'manager')
+        .select('id, name, department_id')
         .order('name');
       
       if (error) {
-        console.error('Director - Manager-уудыг авахад алдаа гарлаа:', error);
+        console.error('Director - Manager-уудыг авахад алдаа гарлаа:', JSON.stringify(error, null, 2));
+        console.error('Error details:', error.message, error.code, error.details);
         // Fallback data
         setManagers([
-          { id: "manager1", name: "Менежер Бат", department: "Санхүү" },
-          { id: "manager2", name: "Менежер Тэмүүжин", department: "Хүн нөөц" },
-          { id: "manager3", name: "Менежер Саран", department: "Маркетинг" },
-          { id: "manager4", name: "Менежер Баяр", department: "Үйлдвэрлэл" },
-          { id: "manager5", name: "Менежер Оюун", department: "Худалдаа" },
+          { id: "manager1", name: "Менежер Бат", department_id: 3 },
+          { id: "manager2", name: "Менежер Тэмүүжин", department_id: 3 },
+          { id: "manager3", name: "Менежер Саран", department_id: 4 },
+          { id: "manager4", name: "Менежер Баяр", department_id: 4 },
+          { id: "manager5", name: "Менежер Оюун", department_id: 4 },
         ]);
         return;
       }
       
-      console.log('Director - Амжилттай авсан manager-ууд:', data);
-      setManagers(data || []);
+      if (data) {
+        console.log('Director - Manager-ууд:', data);
+        setManagers(data);
+      }
     } catch (error) {
       console.error('Director - Manager-уудыг авахад алдаа гарлаа:', error);
       // Fallback data
       setManagers([
-        { id: "manager1", name: "Менежер Бат", department: "Санхүү" },
-        { id: "manager2", name: "Менежер Тэмүүжин", department: "Хүн нөөц" },
-        { id: "manager3", name: "Менежер Саран", department: "Маркетинг" },
-        { id: "manager4", name: "Менежер Баяр", department: "Үйлдвэрлэл" },
-        { id: "manager5", name: "Менежер Оюун", department: "Худалдаа" },
+        { id: "manager1", name: "Менежер Бат", department_id: 3 },
+        { id: "manager2", name: "Менежер Тэмүүжин", department_id: 3 },
+        { id: "manager3", name: "Менежер Саран", department_id: 4 },
+        { id: "manager4", name: "Менежер Баяр", department_id: 4 },
+        { id: "manager5", name: "Менежер Оюун", department_id: 4 },
       ]);
     }
   };
@@ -359,7 +365,11 @@ export default function DirectorMeetingPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
                   {items.map((item) => (
-                    <tr key={item.id}>
+                    <tr
+                      key={item.id}
+                      onClick={() => setSelectedMeeting(item)}
+                      className="cursor-pointer transition hover:bg-slate-50"
+                    >
                       <td className="px-4 py-4 font-medium text-slate-950">{item.id}</td>
                       <td className="px-4 py-4 text-slate-700">
                         <p className="font-medium text-slate-950">{item.title}</p>
@@ -381,6 +391,102 @@ export default function DirectorMeetingPage() {
         </article>
 
       </section>
+
+      {/* Meeting Detail Modal with Voice Recorder */}
+      {selectedMeeting && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setSelectedMeeting(null)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[30px] bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
+                  {selectedMeeting.id}
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                  {selectedMeeting.title}
+                </h2>
+              </div>
+              <button
+                onClick={() => setSelectedMeeting(null)}
+                className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Meeting Details */}
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-400 uppercase tracking-[0.24em]">Зохион байгуулагч</p>
+                <p className="mt-2 font-medium text-slate-950">{selectedMeeting.organizer}</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-400 uppercase tracking-[0.24em]">Огноо</p>
+                <p className="mt-2 font-medium text-slate-950">{selectedMeeting.date}</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-400 uppercase tracking-[0.24em]">Байршил</p>
+                <p className="mt-2 font-medium text-slate-950">{selectedMeeting.location}</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-xs text-slate-400 uppercase tracking-[0.24em]">Төлөв</p>
+                <span className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(selectedMeeting.status)}`}>
+                  {selectedMeeting.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Voice Recorder Section */}
+            <div className="mt-6">
+              <p className="mb-4 text-xs uppercase tracking-[0.3em] text-slate-400">
+                Дуу бичлэг
+              </p>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div>
+                  <p className="mb-2 text-sm font-medium text-slate-600">Бичлэг + Текст (Transcription)</p>
+                  <VoiceRecorder
+                    meetingId={selectedMeeting.id}
+                    userId={2} // TODO: Get from auth context
+                    onRecordingSaved={() => {
+                      console.log("Recording saved for meeting:", selectedMeeting.id);
+                    }}
+                    maxDuration={600}
+                  />
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-slate-600">Бичлэг (Simple)</p>
+                  <VoiceRecorderSimple
+                    meetingId={selectedMeeting.id}
+                    userId={2} // TODO: Get from auth context
+                    onRecordingSaved={() => {
+                      console.log("Recording saved for meeting:", selectedMeeting.id);
+                    }}
+                    maxDuration={600}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                onClick={() => setSelectedMeeting(null)}
+                className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-50"
+              >
+                Хаах
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DirectorShell>
   );
 }

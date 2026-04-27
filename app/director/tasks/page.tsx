@@ -118,12 +118,12 @@ export default function DirectorTasksPage() {
   });
 
   // Manager-уудын жагсаалт
-  const [managers, setManagers] = useState([
-    { id: "manager1", name: "Менежер Бат", department: "Санхүү" },
-    { id: "manager2", name: "Менежер Тэмүүжин", department: "Хүн нөөц" },
-    { id: "manager3", name: "Менежер Саран", department: "Маркетинг" },
-    { id: "manager4", name: "Менежер Баяр", department: "Үйлдвэрлэл" },
-    { id: "manager5", name: "Менежер Оюун", department: "Худалдаа" },
+  const [managers, setManagers] = useState<{ id: string | number; name: string; department_id?: number }[]>([
+    { id: "manager1", name: "Менежер Бат", department_id: 3 },
+    { id: "manager2", name: "Менежер Тэмүүжин", department_id: 3 },
+    { id: "manager3", name: "Менежер Саран", department_id: 4 },
+    { id: "manager4", name: "Менежер Баяр", department_id: 4 },
+    { id: "manager5", name: "Менежер Оюун", department_id: 4 },
   ]);
 
   // Database-ээс бүртгэлтэй менежерүүдийг авах
@@ -137,7 +137,7 @@ export default function DirectorTasksPage() {
       
       const { data, error } = await supabase
         .from('users')
-        .select('name, department')
+        .select('id, name, department_id')
         .eq('role', 'manager')
         .order('name');
 
@@ -147,15 +147,7 @@ export default function DirectorTasksPage() {
       }
       
       console.log('Director Tasks - Амжилттай авсан менежерүүд:', data);
-      
-      if (data && data.length > 0) {
-        const dbManagers = data.map((manager: any, index: number) => ({
-          id: `manager_${index + 1}`,
-          name: manager.name,
-          department: manager.department || 'Тодорхойгүй'
-        }));
-        setManagers(dbManagers);
-      }
+      setManagers(data || []);
     } catch (error) {
       console.error('Director Tasks - Менежерүүдийг авахад алдаа гарлаа:', error);
     }
@@ -452,7 +444,7 @@ export default function DirectorTasksPage() {
                       <option value="">Менежер сонгох</option>
                       {managers.map((manager) => (
                         <option key={manager.id} value={manager.name}>
-                          {manager.name} ({manager.department})
+                          {manager.name}
                         </option>
                       ))}
                     </select>

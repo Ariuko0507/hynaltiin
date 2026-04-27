@@ -1,0 +1,7 @@
+setuptools
+wheel
+fastapi
+uvicorn
+python-multipart
+openai-whisper
+torch
