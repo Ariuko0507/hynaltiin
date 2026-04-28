@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ManagerShell } from "../_components/manager-shell";
+import { getUnreadNotificationCount } from "@/app/_lib/notifications";
 
 type TaskStatus = "Эхэлсэн" | "Зассан" | "Эсхийг" | "Дууссан";
 type TaskFilter = "all" | "in_progress" | "pending" | "completed";
@@ -175,6 +176,8 @@ function TaskDetailCard({ task }: { task: TaskItem }) {
 }
 
 export default function ManagerTasksPage() {
+  const [notificationCount, setNotificationCount] = useState(0);
+  const userId = 2; // TODO: Get from auth context
   const [selectedId, setSelectedId] = useState(managerTasks[0].id);
   const [activeFilter, setActiveFilter] = useState<TaskFilter>("all");
 
@@ -205,7 +208,8 @@ export default function ManagerTasksPage() {
         { label: "Хүлээгдэж буй", value: "1" },
       ]}
       noteText="Шүүлтүүр ашиглаад идэвхтэй болон хүлээгдэж буй даалгавруудаа түрүүлж хараарай."
-      notifications={2}
+      notifications={notificationCount}
+      userId={userId}
     >
       <section className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
         <div className="space-y-6">

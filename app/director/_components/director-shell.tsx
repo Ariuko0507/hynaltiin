@@ -17,6 +17,7 @@ type DirectorShellProps = {
   noteTitle?: string;
   noteText?: string;
   notifications?: number;
+  userId?: number;
 };
 
 const sidebarLinks = [
@@ -37,6 +38,7 @@ export function DirectorShell({
   noteTitle = "Анхаарах",
   noteText = "Стратегийн зорилтууд, төсвийн гүйцэтгэл, түншлэлийн хөгжлийг тогтмол хянаж байгаарай.",
   notifications = 0,
+  userId,
 }: DirectorShellProps) {
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-950">

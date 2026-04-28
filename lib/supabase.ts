@@ -48,9 +48,14 @@ export interface Meeting {
   meeting_id: string
   title: string
   description?: string
-  status: 'Эхэлсэн' | 'Зассан' | 'Эсхийг'
-  organizer?: number
-  meeting_date?: string
+  status: 'Төлөвлөсөн' | 'Баталгаажсан' | 'Цуцлагдсан'
+  organizer_id: number
+  meeting_date: string
+  location?: string
+  team_id?: number
+  manager_reaction?: string
+  manager_reaction_at?: string
+  manager_comment?: string
   created_at: string
   updated_at: string
 }

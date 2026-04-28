@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ManagerShell } from "../_components/manager-shell";
+import { getUnreadNotificationCount } from "@/app/_lib/notifications";
 import { supabase } from "@/lib/supabase";
 
 const managerData = {
@@ -32,6 +33,8 @@ const initialTasks = [
 ];
 
 export default function ManagerDashboardPage() {
+  const [notificationCount, setNotificationCount] = useState(0);
+  const userId = 2; // TODO: Get from auth context
   const [tasks, setTasks] = useState<string[]>(initialTasks);
   const [showMeetingForm, setShowMeetingForm] = useState(false);
   const [meetings, setMeetings] = useState<any[]>([]);
@@ -135,6 +138,11 @@ export default function ManagerDashboardPage() {
     }
   };
 
+  // Fetch notification count
+  useEffect(() => {
+    getUnreadNotificationCount(userId).then(setNotificationCount);
+  }, [userId]);
+
   return (
     <ManagerShell
       currentPath="/manager/dashboard"
@@ -147,7 +155,8 @@ export default function ManagerDashboardPage() {
         { label: "Хүлээгдэж буй", value: "3" },
         { label: "Дууссан", value: "4" },
       ]}
-      notifications={2}
+      notifications={notificationCount}
+      userId={userId}
     >
       <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <div className="space-y-6">

@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { DirectorShell } from "../_components/director-shell";
 import { supabase, Task } from "@/lib/supabase";
+import { getUnreadNotificationCount, createNotification } from "@/app/_lib/notifications";
 
 type TaskStatus = "Эхэлсэн" | "Зассан" | "Эсхийг" | "Дууссан";
 type TaskFilter = "all" | "in_progress" | "pending" | "completed";
@@ -116,6 +117,8 @@ export default function DirectorTasksPage() {
     assignedTo: '',
     dueDate: ''
   });
+  const [notificationCount, setNotificationCount] = useState(0);
+  const userId = 1; // TODO: Get from auth context
 
   // Manager-уудын жагсаалт
   const [managers, setManagers] = useState<{ id: string | number; name: string; department_id?: number }[]>([
@@ -135,21 +138,21 @@ export default function DirectorTasksPage() {
     try {
       console.log('Director Tasks - Менежерүүдийг авах оролдлого...');
       
+      // Fetch all users (role column doesn't exist, filter manually if needed)
       const { data, error } = await supabase
         .from('users')
         .select('id, name, department_id')
-        .eq('role', 'manager')
         .order('name');
 
       if (error) {
-        console.error('Director Tasks - Менежерүүдийг авахад алдаа гарлаа:', error);
+        console.error('Director Tasks - Менежерүүдийг авахад алдаа гарлаа:', error?.message || error);
         return;
       }
       
       console.log('Director Tasks - Амжилттай авсан менежерүүд:', data);
       setManagers(data || []);
     } catch (error) {
-      console.error('Director Tasks - Менежерүүдийг авахад алдаа гарлаа:', error);
+      console.error('Director Tasks - Менежерүүдийг авахад алдаа гарлаа:', error instanceof Error ? error.message : error);
     }
   };
 
@@ -157,6 +160,11 @@ export default function DirectorTasksPage() {
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  // Fetch notification count
+  useEffect(() => {
+    getUnreadNotificationCount(userId).then(setNotificationCount);
+  }, [userId]);
 
   const fetchTasks = async () => {
     try {
@@ -215,6 +223,21 @@ export default function DirectorTasksPage() {
       }
       
       console.log('Director Tasks - Даалгавар амжилттай хадгалагдлаа:', data);
+      
+      // Send notification to the assigned manager
+      if (taskData.assignedTo) {
+        const assignedManager = managers.find(m => m.name === taskData.assignedTo);
+        if (assignedManager) {
+          await createNotification(
+            Number(assignedManager.id),
+            'Шинэ даалгавар',
+            `Директор танд шинэ даалгавар өглөө: ${taskData.title}`,
+            'task',
+            '/director/tasks'
+          );
+        }
+      }
+      
       alert('Даалгавар амжилттай үүсгэгдлээ!');
       
       setTaskData({ title: '', description: '', assignedTo: '', dueDate: '' });
@@ -267,7 +290,8 @@ export default function DirectorTasksPage() {
         { label: "Идэвхтэй", value: String(tasks.filter(t => t.status === 'Эхэлсэн' || t.status === 'Зассан').length) },
         { label: "Хүлээгдэж буй", value: String(tasks.filter(t => t.status === 'Эсхийг').length) },
       ]}
-      notifications={2}
+      notifications={notificationCount}
+      userId={userId}
       noteText="Шүүлтүүр ашиглаад идэвхтэй болон хүлээгдэж буй даалгавруудаа түрүүлж хараарай."
     >
       <section className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">

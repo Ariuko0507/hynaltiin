@@ -5,6 +5,7 @@ import { DirectorShell } from "../_components/director-shell";
 import { VoiceRecorder } from "@/app/_components/voice-recorder";
 import { VoiceRecorderSimple } from "@/app/_components/voice-recorder-simple";
 import { supabase } from "@/lib/supabase";
+import { getUnreadNotificationCount, createNotification } from "@/app/_lib/notifications";
 
 type MeetingStatus = "Төлөвлөсөн" | "Баталгаажсан" | "Цуцлагдсан";
 
@@ -63,6 +64,8 @@ export default function DirectorMeetingPage() {
     location: "",
     participants: [] as string[],
   });
+  const [notificationCount, setNotificationCount] = useState(0);
+  const userId = 1; // TODO: Get from auth context
 
   // Статистик тооцоолох
   const meetingStats = useMemo(() => {
@@ -103,8 +106,7 @@ export default function DirectorMeetingPage() {
         .order('name');
       
       if (error) {
-        console.error('Director - Manager-уудыг авахад алдаа гарлаа:', JSON.stringify(error, null, 2));
-        console.error('Error details:', error.message, error.code, error.details);
+        console.error('Director - Manager-уудыг авахад алдаа гарлаа:', error?.message || error);
         // Fallback data
         setManagers([
           { id: "manager1", name: "Менежер Бат", department_id: 3 },
@@ -116,12 +118,21 @@ export default function DirectorMeetingPage() {
         return;
       }
       
-      if (data) {
+      if (data && data.length > 0) {
         console.log('Director - Manager-ууд:', data);
         setManagers(data);
+      } else {
+        // Use fallback if no data
+        setManagers([
+          { id: "manager1", name: "Менежер Бат", department_id: 3 },
+          { id: "manager2", name: "Менежер Тэмүүжин", department_id: 3 },
+          { id: "manager3", name: "Менежер Саран", department_id: 4 },
+          { id: "manager4", name: "Менежер Баяр", department_id: 4 },
+          { id: "manager5", name: "Менежер Оюун", department_id: 4 },
+        ]);
       }
     } catch (error) {
-      console.error('Director - Manager-уудыг авахад алдаа гарлаа:', error);
+      console.error('Director - Manager-уудыг авахад алдаа гарлаа:', error instanceof Error ? error.message : error);
       // Fallback data
       setManagers([
         { id: "manager1", name: "Менежер Бат", department_id: 3 },
@@ -146,6 +157,11 @@ export default function DirectorMeetingPage() {
   useEffect(() => {
     fetchMeetings();
   }, []);
+
+  // Fetch notification count
+  useEffect(() => {
+    getUnreadNotificationCount(userId).then(setNotificationCount);
+  }, [userId]);
 
   const fetchMeetings = async () => {
     try {
@@ -200,7 +216,6 @@ export default function DirectorMeetingPage() {
       const meetingData = {
         meeting_id: `meeting_${Date.now()}`,
         title: newMeeting.title,
-        description: '',
         meeting_date: newMeeting.date.split(' ')[0],
         meeting_time: newMeeting.date.split(' ')[1] || '10:00',
         participants: newMeeting.participants.length > 0 
@@ -239,6 +254,23 @@ export default function DirectorMeetingPage() {
         alert('Хурал амжилттай үүсгэгдлээ (local state)!');
       } else {
         console.log('Meeting page - Хурал амжилттай хадгалагдлаа:', data);
+        
+        // Send notifications to participating managers
+        if (newMeeting.participants.length > 0) {
+          for (const managerId of newMeeting.participants) {
+            const manager = managers.find(m => m.id === managerId);
+            if (manager) {
+              await createNotification(
+                Number(manager.id),
+                'Шинэ хурал',
+                `Директор танд хурал товлож байна: ${newMeeting.title}`,
+                'meeting',
+                '/director/meeting'
+              );
+            }
+          }
+        }
+        
         alert('Хурал амжилттай үүсгэгдлээ!');
         
         // Хурлын жагсаалтыг шинэчлэх
@@ -261,7 +293,8 @@ export default function DirectorMeetingPage() {
       title="Хурал, уулзалтын хуваарь"
       description="Өөрийн оролцох хурал, зохион байгуулагч, хугацаа болон байршлыг нэг ижил загвартайгаар харж, шаардлагатай үед шинэ уулзалт үүсгэнэ."
       stats={meetingStats}
-      notifications={2}
+      notifications={notificationCount}
+      userId={userId}
       action={
         <button
           type="button"

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import Groq from 'groq-sdk';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,6 +9,10 @@ const supabaseAdmin = createClient(
     auth: { autoRefreshToken: false, persistSession: false }
   }
 );
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY!,
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,29 +34,22 @@ export async function POST(request: NextRequest) {
     const audioBuffer = await audioResponse.arrayBuffer();
     const audioBlob = new Blob([audioBuffer], { type: 'audio/webm' });
 
-    // Send to local Whisper server
-    const formData = new FormData();
-    formData.append('file', audioBlob, 'recording.webm');
+    // Convert to File for Groq API
+    const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
 
-    const whisperResponse = await fetch('http://localhost:8001/transcribe', {
-      method: 'POST',
-      body: formData,
+    console.log('Sending to Groq Whisper API...');
+    const transcription = await groq.audio.transcriptions.create({
+      file: audioFile,
+      model: 'whisper-large-v3',
+      language: 'mn', // Mongolian
     });
 
-    if (!whisperResponse.ok) {
-      throw new Error('Whisper server error');
-    }
-
-    const whisperResult = await whisperResponse.json();
-
-    if (!whisperResult.success) {
-      throw new Error(whisperResult.error || 'Transcription failed');
-    }
+    console.log('Transcription result:', transcription.text);
 
     // Update database with transcription
     const { error: updateError } = await supabaseAdmin
       .from('meeting_recordings')
-      .update({ transcription: whisperResult.transcription })
+      .update({ transcription: transcription.text })
       .eq('id', recordId);
 
     if (updateError) {
@@ -64,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      transcription: whisperResult.transcription 
+      transcription: transcription.text 
     });
   } catch (error) {
     console.error('Transcription error:', error);

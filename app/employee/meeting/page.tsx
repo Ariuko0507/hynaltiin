@@ -1,47 +1,26 @@
 //mployee/meeting/page.tsx//
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { EmployeeShell } from "../_components/employee-shell";
 import { VoiceRecorder } from "@/app/_components/voice-recorder";
 
 type MeetingStatus = "Төлөвлөсөн" | "Баталгаажсан" | "Цуцлагдсан";
 
 type MeetingItem = {
-  id: string;
+  id: number;
+  meeting_id: string;
   title: string;
   status: MeetingStatus;
   organizer: string;
+  organizer_id: number;
   date: string;
   location: string;
+  description?: string;
+  manager_reaction?: string;
+  manager_comment?: string;
 };
 
-const initialMeetingItems: MeetingItem[] = [
-  {
-    id: "M-001",
-    title: "Сарын тайлангийн хурал",
-    status: "Баталгаажсан",
-    organizer: "Админ Бат",
-    date: "2026-04-29 10:00",
-    location: "2 давхар, хурлын өрөө A",
-  },
-  {
-    id: "M-002",
-    title: "Төслийн явцын уулзалт",
-    status: "Төлөвлөсөн",
-    organizer: "Менежер Тэмүүжин",
-    date: "2026-04-30 14:00",
-    location: "Google Meet",
-  },
-  {
-    id: "M-003",
-    title: "Стратегийн төлөвлөгөөний хурал",
-    status: "Цуцлагдсан",
-    organizer: "Директор Энх",
-    date: "2026-05-01 09:00",
-    location: "Төв байр, хурлын танхим",
-  },
-];
 
 function getStatusClasses(status: MeetingStatus) {
   if (status === "Баталгаажсан") {
@@ -56,7 +35,8 @@ function getStatusClasses(status: MeetingStatus) {
 }
 
 export default function EmployeeMeetingPage() {
-  const [items, setItems] = useState(initialMeetingItems);
+  const [items, setItems] = useState<MeetingItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<MeetingItem | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'confirmed'>('all');
@@ -65,28 +45,72 @@ export default function EmployeeMeetingPage() {
     status: "Төлөвлөсөн" as MeetingStatus,
     date: "",
     location: "",
+    description: "",
   });
+  const userId = 4; // TODO: Get from auth context
+
+  // Fetch meetings from database
+  useEffect(() => {
+    fetchMeetings();
+  }, []);
+
+  const fetchMeetings = async () => {
+    try {
+      const response = await fetch(`/api/meetings?userId=${userId}&userRole=employee`);
+      const data = await response.json();
+      if (data.meetings) {
+        const formattedMeetings = data.meetings.map((m: any) => ({
+          id: m.id,
+          meeting_id: m.meeting_id,
+          title: m.title,
+          status: m.status,
+          organizer: m.organizer?.name || 'Unknown',
+          organizer_id: m.organizer_id,
+          date: new Date(m.meeting_date).toLocaleString('mn-MN'),
+          location: m.location || '',
+          description: m.description,
+          manager_reaction: m.manager_reaction,
+          manager_comment: m.manager_comment,
+        }));
+        setItems(formattedMeetings);
+      }
+    } catch (error) {
+      console.error('Error fetching meetings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Баталгаажсан хурлууд
   const confirmedMeetings = items.filter(item => item.status === "Баталгаажсан");
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!newMeeting.title || !newMeeting.date || !newMeeting.location) {
       return;
     }
 
-    const newItem: MeetingItem = {
-      id: `M-${String(items.length + 1).padStart(3, "0")}`,
-      title: newMeeting.title,
-      status: newMeeting.status,
-      organizer: "Ажилтан Сарнай",
-      date: newMeeting.date,
-      location: newMeeting.location,
-    };
+    try {
+      const response = await fetch('/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newMeeting.title,
+          description: newMeeting.description,
+          status: newMeeting.status,
+          meeting_date: newMeeting.date,
+          location: newMeeting.location,
+          organizer_id: userId,
+        }),
+      });
 
-    setItems((current) => [...current, newItem]);
-    setNewMeeting({ title: "", status: "Төлөвлөсөн", date: "", location: "" });
-    setShowForm(false);
+      if (response.ok) {
+        await fetchMeetings();
+        setNewMeeting({ title: "", status: "Төлөвлөсөн", date: "", location: "", description: "" });
+        setShowForm(false);
+      }
+    } catch (error) {
+      console.error('Error creating meeting:', error);
+    }
   };
 
   return (
@@ -243,26 +267,40 @@ export default function EmployeeMeetingPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 bg-white">
-                {(activeTab === 'all' ? items : confirmedMeetings).map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-4 py-4 font-medium text-slate-950">{item.id}</td>
-                    <td className="px-4 py-4 text-slate-700">
-                      <p className="font-medium text-slate-950">{item.title}</p>
-                      <p className="mt-1 text-xs text-slate-500">{item.location}</p>
-                    </td>
-                    <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
-                    <td className="px-4 py-4 text-slate-700">{item.date}</td>
-                    <td className="px-4 py-4">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
-                          item.status
-                        )}`}
-                      >
-                        {item.status}
-                      </span>
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                      Ачааллаж байна...
                     </td>
                   </tr>
-                ))}
+                ) : (activeTab === 'all' ? items : confirmedMeetings).length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                      Хурал олдсонгүй
+                    </td>
+                  </tr>
+                ) : (
+                  (activeTab === 'all' ? items : confirmedMeetings).map((item) => (
+                    <tr key={item.id}>
+                      <td className="px-4 py-4 font-medium text-slate-950">{item.meeting_id}</td>
+                      <td className="px-4 py-4 text-slate-700">
+                        <p className="font-medium text-slate-950">{item.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">{item.location}</p>
+                      </td>
+                      <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
+                      <td className="px-4 py-4 text-slate-700">{item.date}</td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                            item.status
+                          )}`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -293,30 +331,44 @@ export default function EmployeeMeetingPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
-                  {items.map((item) => (
-                    <tr
-                      key={item.id}
-                      onClick={() => setSelectedMeeting(item)}
-                      className="cursor-pointer transition hover:bg-slate-50"
-                    >
-                      <td className="px-4 py-4 font-medium text-slate-950">{item.id}</td>
-                      <td className="px-4 py-4 text-slate-700">
-                        <p className="font-medium text-slate-950">{item.title}</p>
-                        <p className="mt-1 text-xs text-slate-500">{item.location}</p>
-                      </td>
-                      <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
-                      <td className="px-4 py-4 text-slate-700">{item.date}</td>
-                      <td className="px-4 py-4">
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
-                            item.status
-                          )}`}
-                        >
-                          {item.status}
-                        </span>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                        Ачааллаж байна...
                       </td>
                     </tr>
-                  ))}
+                  ) : items.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                        Хурал олдсонгүй
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map((item) => (
+                      <tr
+                        key={item.id}
+                        onClick={() => setSelectedMeeting(item)}
+                        className="cursor-pointer transition hover:bg-slate-50"
+                      >
+                        <td className="px-4 py-4 font-medium text-slate-950">{item.meeting_id}</td>
+                        <td className="px-4 py-4 text-slate-700">
+                          <p className="font-medium text-slate-950">{item.title}</p>
+                          <p className="mt-1 text-xs text-slate-500">{item.location}</p>
+                        </td>
+                        <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
+                        <td className="px-4 py-4 text-slate-700">{item.date}</td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                              item.status
+                            )}`}
+                          >
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -337,7 +389,7 @@ export default function EmployeeMeetingPage() {
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{selectedMeeting.id}</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{selectedMeeting.meeting_id}</p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">{selectedMeeting.title}</h2>
               </div>
               <button
@@ -370,16 +422,31 @@ export default function EmployeeMeetingPage() {
                   {selectedMeeting.status}
                 </span>
               </div>
+              {selectedMeeting.description && (
+                <div className="rounded-2xl bg-slate-50 p-4 md:col-span-2">
+                  <p className="text-xs text-slate-400 uppercase tracking-[0.24em]">Тайлбар</p>
+                  <p className="mt-2 font-medium text-slate-950">{selectedMeeting.description}</p>
+                </div>
+              )}
+              {selectedMeeting.manager_reaction && (
+                <div className="rounded-2xl bg-emerald-50 p-4 md:col-span-2">
+                  <p className="text-xs text-emerald-600 uppercase tracking-[0.24em]">Менежерийн хариу</p>
+                  <p className="mt-2 font-medium text-emerald-700">{selectedMeeting.manager_reaction}</p>
+                  {selectedMeeting.manager_comment && (
+                    <p className="mt-1 text-sm text-emerald-600">{selectedMeeting.manager_comment}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Voice Recorder Section */}
             <div className="mt-6">
               <p className="mb-4 text-xs uppercase tracking-[0.3em] text-slate-400">Дуу бичлэг</p>
               <VoiceRecorder
-                meetingId={selectedMeeting.id}
-                userId={4} // TODO: Get from auth context
+                meetingId={selectedMeeting.meeting_id}
+                userId={userId}
                 onRecordingSaved={() => {
-                  console.log("Recording saved for meeting:", selectedMeeting.id);
+                  console.log("Recording saved for meeting:", selectedMeeting.meeting_id);
                 }}
                 maxDuration={600}
               />

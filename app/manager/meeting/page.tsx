@@ -1,19 +1,26 @@
 //manager/meeting/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ManagerShell } from "../_components/manager-shell";
+import { getUnreadNotificationCount } from "@/app/_lib/notifications";
 import { VoiceRecorder } from "@/app/_components/voice-recorder";
 
 type MeetingStatus = "Төлөвлөсөн" | "Баталгаажсан" | "Цуцлагдсан";
 
 type MeetingItem = {
-  id: string;
+  id: number;
+  meeting_id: string;
   title: string;
   status: MeetingStatus;
   organizer: string;
+  organizer_id: number;
   date: string;
   location: string;
+  description?: string;
+  manager_reaction?: string;
+  manager_comment?: string;
+  team_id?: number;
 };
 
 function getStatusClasses(status: MeetingStatus) {
@@ -22,37 +29,15 @@ function getStatusClasses(status: MeetingStatus) {
   return "bg-rose-100 text-rose-700";
 }
 
-const initialMeetingItems: MeetingItem[] = [
-  {
-    id: "M-001",
-    title: "Багийн сарын хурал",
-    status: "Баталгаажсан",
-    organizer: "Менежер Тэмүүжин",
-    date: "2026-04-29 10:00",
-    location: "2 давхар, хурлын өрөө B",
-  },
-  {
-    id: "M-002",
-    title: "Төслийн явцын уулзалт",
-    status: "Төлөвлөсөн",
-    organizer: "Менежер Тэмүүжин",
-    date: "2026-04-30 14:00",
-    location: "Google Meet",
-  },
-  {
-    id: "M-003",
-    title: "Ажилтнуудын үнэлгээний хурал",
-    status: "Төлөвлөсөн",
-    organizer: "Менежер Тэмүүжин",
-    date: "2026-05-02 09:00",
-    location: "Төв байр, хурлын танхим",
-  },
-];
 
 export default function ManagerMeetingPage() {
-  const [items, setItems] = useState<MeetingItem[]>(initialMeetingItems);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const userId = 2; // TODO: Get from auth context
+  const [items, setItems] = useState<MeetingItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<MeetingItem | null>(null);
+  const [showReactionForm, setShowReactionForm] = useState(false);
   const [newMeeting, setNewMeeting] = useState({
     title: "",
     date: "",
@@ -60,6 +45,11 @@ export default function ManagerMeetingPage() {
     location: "",
     description: "",
     status: "Төлөвлөсөн" as MeetingStatus
+  });
+  const [reaction, setReaction] = useState({
+    status: "Баталгаажсан" as MeetingStatus,
+    manager_reaction: "",
+    manager_comment: ""
   });
 
   // Таб state
@@ -75,24 +65,92 @@ export default function ManagerMeetingPage() {
   // Илүү олон хуралнууд
   const otherMeetings = items.filter(item => !teamMeetings.includes(item));
 
-  const handleSend = () => {
-    if (!newMeeting.title.trim() || !newMeeting.date || !newMeeting.time) {
-      alert("Гарчиг, огноо болон цаг оруулна уу");
+  const handleSend = async () => {
+    if (!newMeeting.title.trim() || !newMeeting.date) {
+      alert("Гарчиг, огноо оруулна уу");
       return;
     }
 
-    const newItem: MeetingItem = {
-      id: `M-${String(items.length + 1).padStart(3, "0")}`,
-      title: newMeeting.title,
-      status: "Төлөвлөсөн",
-      organizer: "Менежер Тэмүүжин",
-      date: `${newMeeting.date} ${newMeeting.time}`,
-      location: newMeeting.location
-    };
+    try {
+      const response = await fetch('/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newMeeting.title,
+          description: newMeeting.description,
+          status: newMeeting.status,
+          meeting_date: newMeeting.date,
+          location: newMeeting.location,
+          organizer_id: userId,
+        }),
+      });
 
-    setItems([newItem, ...items]);
-    setNewMeeting({ title: "", date: "", time: "", location: "", description: "", status: "Төлөвлөсөн" as MeetingStatus });
-    setShowForm(false);
+      if (response.ok) {
+        await fetchMeetings();
+        setNewMeeting({ title: "", date: "", time: "", location: "", description: "", status: "Төлөвлөсөн" as MeetingStatus });
+        setShowForm(false);
+      }
+    } catch (error) {
+      console.error('Error creating meeting:', error);
+    }
+  };
+
+  const handleReaction = async () => {
+    if (!selectedMeeting) return;
+
+    try {
+      const response = await fetch(`/api/meetings/${selectedMeeting.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: reaction.status,
+          manager_reaction: reaction.manager_reaction,
+          manager_comment: reaction.manager_comment,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchMeetings();
+        setShowReactionForm(false);
+        setReaction({ status: "Баталгаажсан", manager_reaction: "", manager_comment: "" });
+      }
+    } catch (error) {
+      console.error('Error updating meeting:', error);
+    }
+  };
+
+  // Fetch notification count and meetings
+  useEffect(() => {
+    getUnreadNotificationCount(userId).then(setNotificationCount);
+    fetchMeetings();
+  }, [userId]);
+
+  const fetchMeetings = async () => {
+    try {
+      const response = await fetch(`/api/meetings?userId=${userId}&userRole=manager`);
+      const data = await response.json();
+      if (data.meetings) {
+        const formattedMeetings = data.meetings.map((m: any) => ({
+          id: m.id,
+          meeting_id: m.meeting_id,
+          title: m.title,
+          status: m.status,
+          organizer: m.organizer?.name || 'Unknown',
+          organizer_id: m.organizer_id,
+          date: new Date(m.meeting_date).toLocaleString('mn-MN'),
+          location: m.location || '',
+          description: m.description,
+          manager_reaction: m.manager_reaction,
+          manager_comment: m.manager_comment,
+          team_id: m.team_id,
+        }));
+        setItems(formattedMeetings);
+      }
+    } catch (error) {
+      console.error('Error fetching meetings:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -107,7 +165,8 @@ export default function ManagerMeetingPage() {
         { label: "Төлөвлөсөн", value: "2" },
         { label: "Цуцлагдсан", value: "0" },
       ]}
-      notifications={2}
+      notifications={notificationCount}
+      userId={userId}
       action={
         <button
           type="button"
@@ -239,22 +298,36 @@ export default function ManagerMeetingPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 bg-white">
-                {(activeTab === 'all' ? items : teamMeetings).map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-4 py-4 font-medium text-slate-950">{item.id}</td>
-                    <td className="px-4 py-4 text-slate-700">
-                      <p className="font-medium text-slate-950">{item.title}</p>
-                      <p className="mt-1 text-xs text-slate-500">{item.location}</p>
-                    </td>
-                    <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
-                    <td className="px-4 py-4 text-slate-700">{item.date}</td>
-                    <td className="px-4 py-4">
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(item.status)}`}>
-                        {item.status}
-                      </span>
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                      Ачааллаж байна...
                     </td>
                   </tr>
-                ))}
+                ) : (activeTab === 'all' ? items : teamMeetings).length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                      Хурал олдсонгүй
+                    </td>
+                  </tr>
+                ) : (
+                  (activeTab === 'all' ? items : teamMeetings).map((item) => (
+                    <tr key={item.id}>
+                      <td className="px-4 py-4 font-medium text-slate-950">{item.meeting_id}</td>
+                      <td className="px-4 py-4 text-slate-700">
+                        <p className="font-medium text-slate-950">{item.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">{item.location}</p>
+                      </td>
+                      <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
+                      <td className="px-4 py-4 text-slate-700">{item.date}</td>
+                      <td className="px-4 py-4">
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(item.status)}`}>
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -292,26 +365,40 @@ export default function ManagerMeetingPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
-                  {items.map((item) => (
-                    <tr
-                      key={item.id}
-                      onClick={() => setSelectedMeeting(item)}
-                      className="cursor-pointer transition hover:bg-slate-50"
-                    >
-                      <td className="px-4 py-4 font-medium text-slate-950">{item.id}</td>
-                      <td className="px-4 py-4 text-slate-700">
-                        <p className="font-medium text-slate-950">{item.title}</p>
-                        <p className="mt-1 text-xs text-slate-500">{item.location}</p>
-                      </td>
-                      <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
-                      <td className="px-4 py-4 text-slate-700">{item.date}</td>
-                      <td className="px-4 py-4">
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(item.status)}`}>
-                          {item.status}
-                        </span>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                        Ачааллаж байна...
                       </td>
                     </tr>
-                  ))}
+                  ) : items.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                        Хурал олдсонгүй
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map((item) => (
+                      <tr
+                        key={item.id}
+                        onClick={() => setSelectedMeeting(item)}
+                        className="cursor-pointer transition hover:bg-slate-50"
+                      >
+                        <td className="px-4 py-4 font-medium text-slate-950">{item.meeting_id}</td>
+                        <td className="px-4 py-4 text-slate-700">
+                          <p className="font-medium text-slate-950">{item.title}</p>
+                          <p className="mt-1 text-xs text-slate-500">{item.location}</p>
+                        </td>
+                        <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
+                        <td className="px-4 py-4 text-slate-700">{item.date}</td>
+                        <td className="px-4 py-4">
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(item.status)}`}>
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -332,7 +419,7 @@ export default function ManagerMeetingPage() {
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{selectedMeeting.id}</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{selectedMeeting.meeting_id}</p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">{selectedMeeting.title}</h2>
               </div>
               <button
@@ -365,23 +452,99 @@ export default function ManagerMeetingPage() {
                   {selectedMeeting.status}
                 </span>
               </div>
+              {selectedMeeting.description && (
+                <div className="rounded-2xl bg-slate-50 p-4 md:col-span-2">
+                  <p className="text-xs text-slate-400 uppercase tracking-[0.24em]">Тайлбар</p>
+                  <p className="mt-2 font-medium text-slate-950">{selectedMeeting.description}</p>
+                </div>
+              )}
+              {selectedMeeting.manager_reaction && (
+                <div className="rounded-2xl bg-emerald-50 p-4 md:col-span-2">
+                  <p className="text-xs text-emerald-600 uppercase tracking-[0.24em]">Менежерийн хариу</p>
+                  <p className="mt-2 font-medium text-emerald-700">{selectedMeeting.manager_reaction}</p>
+                  {selectedMeeting.manager_comment && (
+                    <p className="mt-1 text-sm text-emerald-600">{selectedMeeting.manager_comment}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Voice Recorder Section */}
             <div className="mt-6">
               <p className="mb-4 text-xs uppercase tracking-[0.3em] text-slate-400">Дуу бичлэг</p>
               <VoiceRecorder
-                meetingId={selectedMeeting.id}
-                userId={3} // TODO: Get from auth context
+                meetingId={selectedMeeting.meeting_id}
+                userId={userId}
                 onRecordingSaved={() => {
-                  console.log("Recording saved for meeting:", selectedMeeting.id);
+                  console.log("Recording saved for meeting:", selectedMeeting.meeting_id);
                 }}
                 maxDuration={600}
               />
             </div>
 
+            {/* Manager Reaction Form */}
+            {showReactionForm && (
+              <div className="mt-6 rounded-2xl bg-slate-50 p-4">
+                <p className="mb-4 text-xs uppercase tracking-[0.3em] text-slate-400">Менежерийн хариу</p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">Төлөв</span>
+                    <select
+                      value={reaction.status}
+                      onChange={(e) => setReaction((c) => ({ ...c, status: e.target.value as MeetingStatus }))}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-slate-400"
+                    >
+                      <option value="Төлөвлөсөн">Төлөвлөсөн</option>
+                      <option value="Баталгаажсан">Баталгаажсан</option>
+                      <option value="Цуцлагдсан">Цуцлагдсан</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">Хариу</span>
+                    <input
+                      type="text"
+                      value={reaction.manager_reaction}
+                      onChange={(e) => setReaction((c) => ({ ...c, manager_reaction: e.target.value }))}
+                      placeholder="Жишээ: Зөвшөөрсөн, Хоцорсон гэх мэт"
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-slate-400"
+                    />
+                  </label>
+                  <label className="block md:col-span-2">
+                    <span className="text-sm font-medium text-slate-700">Санал</span>
+                    <textarea
+                      value={reaction.manager_comment}
+ onChange={(e) => setReaction((c) => ({ ...c, manager_comment: e.target.value }))}
+                      placeholder="Нэмэлт тайлбар"
+                      rows={3}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-slate-400"
+                    />
+                  </label>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    onClick={handleReaction}
+                    className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  >
+                    Илгээх
+                  </button>
+                  <button
+                    onClick={() => setShowReactionForm(false)}
+                    className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-50"
+                  >
+                    Цуцлах
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                onClick={() => setShowReactionForm(!showReactionForm)}
+                className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                {showReactionForm ? 'Хаах' : 'Хариу өгөх'}
+              </button>
               <button
                 onClick={() => setSelectedMeeting(null)}
                 className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-50"

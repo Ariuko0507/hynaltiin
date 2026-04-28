@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ManagerShell } from "../_components/manager-shell";
+import { getUnreadNotificationCount } from "@/app/_lib/notifications";
 
 type FulfillmentStatus = "Ноорог" | "Хадгалсан" | "Илгээсэн";
 type Role = "Ажилтан";
@@ -286,6 +287,8 @@ function FulfillmentDocumentPreview({
 }
 
 export default function ManagerFulfillmentPage() {
+  const [notificationCount, setNotificationCount] = useState(0);
+  const userId = 2; // TODO: Get from auth context
   const [selectedId, setSelectedId] = useState(sentFulfillments[0].id);
   const [drafts, setDrafts] = useState(initialDrafts);
   const [message, setMessage] = useState("");
@@ -294,7 +297,12 @@ export default function ManagerFulfillmentPage() {
 
   const selectedItem = fulfillments.find((item) => item.id === selectedId) ?? fulfillments[0];
 
-  const currentDraft = useMemo(() => {
+  // Fetch notification count
+  useEffect(() => {
+    getUnreadNotificationCount(userId).then(setNotificationCount);
+  }, [userId]);
+
+  const fulfillmentStats = useMemo(() => {
     return drafts[selectedId];
   }, [drafts, selectedId]);
 
@@ -627,7 +635,8 @@ export default function ManagerFulfillmentPage() {
         { label: "Хадгалсан", value: String(fulfillments.filter((i) => i.status === "Хадгалсан").length) },
         { label: "Ноорог", value: String(fulfillments.filter((i) => i.status === "Ноорог").length) },
       ]}
-      notifications={2}
+      notifications={notificationCount}
+      userId={userId}
       noteTitle="Анхаарах"
       noteText="Ажилтнуудын биелэлтийг хянаж, сэтгэгдэл бичих боломжтой."
     >
@@ -709,7 +718,7 @@ export default function ManagerFulfillmentPage() {
           </div>
 
           <div className="mt-6">
-            <FulfillmentDocumentPreview draft={currentDraft} onChange={handleChange} readOnly={true} />
+            <FulfillmentDocumentPreview draft={fulfillmentStats} onChange={handleChange} readOnly={true} />
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">

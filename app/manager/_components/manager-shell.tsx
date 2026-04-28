@@ -17,6 +17,7 @@ type ManagerShellProps = {
   noteTitle?: string;
   noteText?: string;
   notifications?: number;
+  userId?: number;
 };
 
 const sidebarLinks = [
@@ -37,6 +38,7 @@ export function ManagerShell({
   noteTitle = "Анхаарах",
   noteText = "Багийн гүйцэтгэл, төслийн явц, хурлын тоймыг тогтмол хянаж байгаарай.",
   notifications = 0,
+  userId,
 }: ManagerShellProps) {
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-950">

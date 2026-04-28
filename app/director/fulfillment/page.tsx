@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { DirectorShell } from "../_components/director-shell";
+import { getUnreadNotificationCount, createNotification } from "@/app/_lib/notifications";
 
 type FulfillmentStatus = "Ноорог" | "Хадгалсан" | "Илгээсэн";
 type Role = "Менежер" | "Ажилтан";
@@ -285,12 +286,21 @@ function FulfillmentDocumentPreview({
 }
 
 export default function DirectorFulfillmentPage() {
-  const [selectedId, setSelectedId] = useState(sentFulfillments[0].id);
-  const [drafts, setDrafts] = useState(initialDrafts);
-  const [message, setMessage] = useState("");
-  const [showSaved, setShowSaved] = useState(false);
   const [fulfillments, setFulfillments] = useState<FulfillmentItem[]>(sentFulfillments);
+  const [selectedFulfillment, setSelectedFulfillment] = useState<FulfillmentItem | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [draft, setDraft] = useState<DraftState>(createEmptyDraft());
+  const [message, setMessage] = useState("");
+  const [notificationCount, setNotificationCount] = useState(0);
+  const userId = 1; // TODO: Get from auth context
   const [roleFilter, setRoleFilter] = useState<Role | "Бүгд">("Бүгд");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, DraftState>>(initialDrafts);
+
+  // Fetch notification count
+  useEffect(() => {
+    getUnreadNotificationCount(userId).then(setNotificationCount);
+  }, [userId]);
 
   const filteredFulfillments = useMemo(() => {
     if (roleFilter === "Бүгд") return fulfillments;
@@ -299,11 +309,8 @@ export default function DirectorFulfillmentPage() {
 
   const selectedItem = filteredFulfillments.find((item) => item.id === selectedId) ?? filteredFulfillments[0] ?? fulfillments[0];
 
-  const currentDraft = useMemo(() => {
-    return drafts[selectedId];
-  }, [drafts, selectedId]);
-
-  const handleChange = (field: keyof DraftState, value: string) => {
+  const handleDraftChange = (field: keyof DraftState, value: string) => {
+    if (!selectedId) return;
     setDrafts((current) => ({
       ...current,
       [selectedId]: {
@@ -433,6 +440,21 @@ export default function DirectorFulfillmentPage() {
               : item
           )
         );
+        
+        // Send notification to the fulfillment owner (manager)
+        const selectedItem = fulfillments.find((item) => item.id === selectedId);
+        if (selectedItem && selectedItem.fromRole === "Менежер") {
+          // Find manager ID from name (simplified - in real app, you'd have proper user mapping)
+          const managerId = 2; // TODO: Get actual manager ID from user mapping
+          await createNotification(
+            managerId,
+            'Шинэ сэтгэгдэл',
+            `Директор таны биелэлт дээр сэтгэгдэл үлдээлээ: ${selectedItem.title}`,
+            'comment',
+            '/director/fulfillment'
+          );
+        }
+        
         setNewComment("");
         setMessage("Сэтгэгдэл нэмэгдлээ.");
         setTimeout(() => setMessage(""), 2000);
@@ -628,7 +650,8 @@ export default function DirectorFulfillmentPage() {
         { label: "Менежер", value: String(fulfillments.filter((i) => i.fromRole === "Менежер").length) },
         { label: "Ажилтан", value: String(fulfillments.filter((i) => i.fromRole === "Ажилтан").length) },
       ]}
-      notifications={2}
+      notifications={notificationCount}
+      userId={userId}
       noteText="Менежер болон ажилтнуудын биелэлтийг хянаж, засвартай баталгаажуулна. Сэтгэгдэл бичих боломжтой."
     >
       {message ? (

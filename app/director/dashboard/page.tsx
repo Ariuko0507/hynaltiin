@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { DirectorShell } from "../_components/director-shell";
 import { supabase, Meeting } from "@/lib/supabase";
+import { getUnreadNotificationCount } from "@/app/_lib/notifications";
 
 const directorData = {
   name: "Директор Энх",
@@ -41,11 +42,18 @@ export default function DirectorDashboardPage() {
     participants: '',
     description: ''
   });
+  const [notificationCount, setNotificationCount] = useState(0);
+  const userId = 1; // TODO: Get from auth context
 
   // Database-ээс хурлуудыг авах
   useEffect(() => {
     fetchMeetings();
   }, []);
+
+  // Fetch notification count
+  useEffect(() => {
+    getUnreadNotificationCount(userId).then(setNotificationCount);
+  }, [userId]);
 
   const fetchMeetings = async () => {
     try {
@@ -196,7 +204,8 @@ export default function DirectorDashboardPage() {
         { label: "Биелэлт хүлээж буй", value: "3" },
         { label: "Хурал", value: "5" },
       ]}
-      notifications={2}
+      notifications={notificationCount}
+      userId={userId}
     >
       <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <div className="space-y-6">
