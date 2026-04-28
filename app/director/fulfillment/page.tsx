@@ -309,6 +309,8 @@ export default function DirectorFulfillmentPage() {
 
   const selectedItem = filteredFulfillments.find((item) => item.id === selectedId) ?? filteredFulfillments[0] ?? fulfillments[0];
 
+  const currentDraft = drafts[selectedId || ""] || createEmptyDraft();
+
   const handleDraftChange = (field: keyof DraftState, value: string) => {
     if (!selectedId) return;
     setDrafts((current) => ({
@@ -688,7 +690,6 @@ export default function DirectorFulfillmentPage() {
                 type="button"
                 onClick={() => {
                   setSelectedId(item.id);
-                  setShowSaved(false);
                 }}
                 className={`w-full rounded-[24px] border p-4 text-left transition ${
                   selectedId === item.id
@@ -744,7 +745,7 @@ export default function DirectorFulfillmentPage() {
           </div>
 
           <div className="mt-6">
-            <FulfillmentDocumentPreview draft={currentDraft} onChange={handleChange} readOnly={false} />
+            <FulfillmentDocumentPreview draft={currentDraft} onChange={handleDraftChange} readOnly={false} />
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">

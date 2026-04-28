@@ -16,8 +16,7 @@ export async function GET(request: NextRequest) {
       .from('meetings')
       .select(`
         *,
-        organizer:users(id, name, role),
-        team:teams(id, name, team_code)
+        organizer:users(id, name)
       `)
       .order('meeting_date', { ascending: true });
 
@@ -67,7 +66,7 @@ export async function POST(request: NextRequest) {
         meeting_id,
         title,
         description,
-        status: status || 'Төлөвлөсөн',
+        status: status ?? 'Төлөвлөсөн',
         organizer_id,
         meeting_date,
         location,

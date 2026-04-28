@@ -10,12 +10,17 @@ import { getUnreadNotificationCount, createNotification } from "@/app/_lib/notif
 type MeetingStatus = "Төлөвлөсөн" | "Баталгаажсан" | "Цуцлагдсан";
 
 type MeetingItem = {
-  id: string;
+  id: number;
+  meeting_id: string;
   title: string;
   status: MeetingStatus;
   organizer: string;
+  organizer_id: number;
   date: string;
   location: string;
+  description?: string;
+  manager_reaction?: string;
+  manager_comment?: string;
 };
 
 function getStatusClasses(status: MeetingStatus) {
@@ -26,32 +31,7 @@ function getStatusClasses(status: MeetingStatus) {
 
 // ── Meeting Page ──────────────────────────────────────────────────────────────
 
-const initialMeetingItems: MeetingItem[] = [
-  {
-    id: "M-001",
-    title: "Сарын тайлангийн хурал",
-    status: "Баталгаажсан",
-    organizer: "Админ Бат",
-    date: "2026-04-29 10:00",
-    location: "2 давхар, хурлын өрөө A",
-  },
-  {
-    id: "M-002",
-    title: "Төслийн явцын уулзалт",
-    status: "Төлөвлөсөн",
-    organizer: "Менежер Тэмүүжин",
-    date: "2026-04-30 14:00",
-    location: "Google Meet",
-  },
-  {
-    id: "M-003",
-    title: "Стратегийн төлөвлөгөөний хурал",
-    status: "Цуцлагдсан",
-    organizer: "Директор Энх",
-    date: "2026-05-01 09:00",
-    location: "Төв байр, хурлын танхим",
-  },
-];
+const initialMeetingItems: MeetingItem[] = [];
 
 export default function DirectorMeetingPage() {
   const [items, setItems] = useState(initialMeetingItems);
@@ -62,6 +42,7 @@ export default function DirectorMeetingPage() {
     status: "Төлөвлөсөн" as MeetingStatus,
     date: "",
     location: "",
+    description: "",
     participants: [] as string[],
   });
   const [notificationCount, setNotificationCount] = useState(0);
@@ -165,42 +146,26 @@ export default function DirectorMeetingPage() {
 
   const fetchMeetings = async () => {
     try {
-      console.log('Meeting page - Хурлуудыг авах оролдлого...');
-      console.log('Supabase URL:', (process.env as any).NEXT_PUBLIC_SUPABASE_URL);
-      
-      const { data, error } = await supabase
-        .from('meetings')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      console.log('Fetch result:', { data, error });
-      
-      if (error) {
-        console.error('Meeting page - Хурлуудыг авахад алдаа гарлаа:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        // Хэрэв database алдаа гарвал initial data хэрэглэх
-        return;
-      }
-      
-      console.log('Meeting page - Амжилттай авсан хурлууд:', data);
-      
-      // Database-ийн өгөгдлийг MeetingItem format руу хөрвүүлэх
-      if (data && data.length > 0) {
-        const formattedItems: MeetingItem[] = data.map((meeting: any, index: number) => ({
-          id: meeting.meeting_id || `M-${String(index + 1).padStart(3, "0")}`,
-          title: meeting.title,
-          status: meeting.status === 'scheduled' ? 'Төлөвлөсөн' : 
-                  meeting.status === 'completed' ? 'Баталгаажсан' : 'Цуцлагдсан',
-          organizer: meeting.participants || 'Директор Энх',
-          date: meeting.meeting_date ? `${meeting.meeting_date} ${meeting.meeting_time || '00:00'}` : meeting.date,
-          location: 'Төв байр, хурлын танхим'
+      const response = await fetch(`/api/meetings?userId=${userId}&userRole=manager`);
+      const data = await response.json();
+      if (data.meetings) {
+        const formattedItems: MeetingItem[] = data.meetings.map((m: any) => ({
+          id: m.id,
+          meeting_id: m.meeting_id,
+          title: m.title,
+          status: m.status,
+          organizer: m.organizer?.name || 'Директор Энх',
+          organizer_id: m.organizer_id,
+          date: new Date(m.meeting_date).toLocaleString('mn-MN'),
+          location: m.location || 'Төв байр, хурлын танхим',
+          description: m.description,
+          manager_reaction: m.manager_reaction,
+          manager_comment: m.manager_comment,
         }));
-        
         setItems(formattedItems);
       }
     } catch (error) {
       console.error('Meeting page - Хурлуудыг авахад алдаа гарлаа:', error);
-      console.error('Catch error details:', JSON.stringify(error, null, 2));
     }
   };
 
@@ -211,50 +176,20 @@ export default function DirectorMeetingPage() {
     }
 
     try {
-      console.log('Meeting page - Хурал хадгалах оролдлого...', newMeeting);
-      
-      const meetingData = {
-        meeting_id: `meeting_${Date.now()}`,
-        title: newMeeting.title,
-        meeting_date: newMeeting.date.split(' ')[0],
-        meeting_time: newMeeting.date.split(' ')[1] || '10:00',
-        participants: newMeeting.participants.length > 0 
-          ? newMeeting.participants.map(id => 
-              managers.find(m => m.id === id)?.name || ''
-            ).join(', ')
-          : 'Директор Энх',
-        status: newMeeting.status === 'Төлөвлөсөн' ? 'scheduled' : 
-                newMeeting.status === 'Баталгаажсан' ? 'completed' : 'cancelled',
-        organizer: 1
-      };
-      
-      console.log('Meeting page - Insert data:', meetingData);
-      
-      // Database-д хурал хадгалах
-      const { data, error } = await supabase
-        .from('meetings')
-        .insert(meetingData);
-
-      console.log('Meeting page - Insert result:', { data, error });
-
-      if (error) {
-        console.error('Meeting page - Хурал хадгалахад алдаа гарлаа:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        // Хэрэв database алдаа гарвал local state дээр нэмэх
-        const newItem: MeetingItem = {
-          id: `M-${String(items.length + 1).padStart(3, "0")}`,
+      const response = await fetch('/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           title: newMeeting.title,
+          description: newMeeting.description,
           status: newMeeting.status,
-          organizer: "Директор Энх",
-          date: newMeeting.date,
+          meeting_date: newMeeting.date,
           location: newMeeting.location,
-        };
+          organizer_id: userId,
+        }),
+      });
 
-        setItems((current) => [...current, newItem]);
-        alert('Хурал амжилттай үүсгэгдлээ (local state)!');
-      } else {
-        console.log('Meeting page - Хурал амжилттай хадгалагдлаа:', data);
-        
+      if (response.ok) {
         // Send notifications to participating managers
         if (newMeeting.participants.length > 0) {
           for (const managerId of newMeeting.participants) {
@@ -272,14 +207,12 @@ export default function DirectorMeetingPage() {
         }
         
         alert('Хурал амжилттай үүсгэгдлээ!');
-        
-        // Хурлын жагсаалтыг шинэчлэх
-        fetchMeetings();
+        await fetchMeetings();
+        setNewMeeting({ title: "", status: "Төлөвлөсөн", date: "", location: "", description: "", participants: [] });
+        setShowForm(false);
+      } else {
+        alert('Хурал үүсгэхэд алдаа гарлаа!');
       }
-
-      setNewMeeting({ title: "", status: "Төлөвлөсөн", date: "", location: "", participants: [] });
-      setShowForm(false);
-      
     } catch (error) {
       console.error('Meeting page - Хурал үүсгэхэд алдаа гарлаа:', error);
       alert('Хурал үүсгэхэд алдаа гарлаа!');
@@ -439,7 +372,7 @@ export default function DirectorMeetingPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-                  {selectedMeeting.id}
+                  {selectedMeeting.meeting_id}
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">
                   {selectedMeeting.title}
@@ -486,7 +419,7 @@ export default function DirectorMeetingPage() {
                 <div>
                   <p className="mb-2 text-sm font-medium text-slate-600">Бичлэг + Текст (Transcription)</p>
                   <VoiceRecorder
-                    meetingId={selectedMeeting.id}
+                    meetingId={selectedMeeting.meeting_id}
                     userId={2} // TODO: Get from auth context
                     onRecordingSaved={() => {
                       console.log("Recording saved for meeting:", selectedMeeting.id);
@@ -497,7 +430,7 @@ export default function DirectorMeetingPage() {
                 <div>
                   <p className="mb-2 text-sm font-medium text-slate-600">Бичлэг (Simple)</p>
                   <VoiceRecorderSimple
-                    meetingId={selectedMeeting.id}
+                    meetingId={selectedMeeting.meeting_id}
                     userId={2} // TODO: Get from auth context
                     onRecordingSaved={() => {
                       console.log("Recording saved for meeting:", selectedMeeting.id);
