@@ -76,9 +76,13 @@ export async function uploadMeetingRecording(
   }
 }
 
-export async function getMeetingRecordings(meetingId: string) {
+export async function getMeetingRecordings(meetingId: string, userId?: number) {
   try {
-    const response = await fetch(`/api/recordings/list?meetingId=${meetingId}`);
+    const query = new URLSearchParams({ meetingId });
+    if (typeof userId === 'number') {
+      query.set('userId', String(userId));
+    }
+    const response = await fetch(`/api/recordings/list?${query.toString()}`);
     if (!response.ok) {
       throw new Error('Failed to fetch recordings');
     }
@@ -118,13 +122,25 @@ export async function transcribeRecording(recordId: number, audioUrl: string) {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to transcribe recording');
+      let errorMessage = 'Failed to transcribe recording';
+      try {
+        const errorBody = await response.json();
+        if (typeof errorBody?.error === 'string' && errorBody.error.trim()) {
+          errorMessage = errorBody.error;
+        }
+      } catch {
+        // ignore JSON parsing errors
+      }
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
     return result.transcription;
   } catch (error) {
     console.error('Transcription error:', error);
-    return null;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown transcription error',
+    };
   }
 }

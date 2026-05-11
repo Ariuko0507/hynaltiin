@@ -131,7 +131,7 @@ export function VoiceRecorderSimple({
       resetRecording();
       onRecordingSaved?.();
       
-      const updatedRecordings = await getMeetingRecordings(meetingId);
+      const updatedRecordings = await getMeetingRecordings(meetingId, userId);
       setRecordings(updatedRecordings);
     } catch (err) {
       console.error("Error saving recording:", err);
@@ -144,7 +144,7 @@ export function VoiceRecorderSimple({
   const handleDeleteRecording = async (filePath: string, recordId: number) => {
     try {
       await deleteMeetingRecording(filePath, recordId);
-      const updatedRecordings = await getMeetingRecordings(meetingId);
+      const updatedRecordings = await getMeetingRecordings(meetingId, userId);
       setRecordings(updatedRecordings);
     } catch (err) {
       console.error("Error deleting recording:", err);
@@ -153,9 +153,9 @@ export function VoiceRecorderSimple({
 
   useEffect(() => {
     if (meetingId) {
-      getMeetingRecordings(meetingId).then(setRecordings);
+      getMeetingRecordings(meetingId, userId).then(setRecordings);
     }
-  }, [meetingId]);
+  }, [meetingId, userId]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

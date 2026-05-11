@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const meetingId = searchParams.get('meetingId');
+    const userId = searchParams.get('userId');
 
     if (!meetingId) {
       return NextResponse.json(
@@ -21,11 +22,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('meeting_recordings')
       .select('*')
       .eq('meeting_id', meetingId)
       .order('created_at', { ascending: false });
+
+    if (userId) {
+      const parsedUserId = Number(userId);
+      if (Number.isFinite(parsedUserId)) {
+        query = query.eq('user_id', parsedUserId);
+      }
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching recordings:', error);

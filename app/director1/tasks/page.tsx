@@ -114,7 +114,7 @@ export default function DirectorTasksPage() {
   const [taskData, setTaskData] = useState({
     title: '',
     description: '',
-    assignedTo: '',
+    assignedTo: '', // This will hold the manager ID (number)
     dueDate: ''
   });
   const [notificationCount, setNotificationCount] = useState(0);
@@ -138,10 +138,15 @@ export default function DirectorTasksPage() {
     try {
       console.log('Director Tasks - Менежерүүдийг авах оролдлого...');
       
-      // Fetch all users (role column doesn't exist, filter manually if needed)
+      // Debug: Check if environment variables are loaded
+      console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+      console.log('Supabase Anon Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
+      
+      // Fetch users with manager role
       const { data, error } = await supabase
         .from('users')
         .select('id, name, department_id')
+        .eq('role_id', 2) // Manager role_id from roles table
         .order('name');
 
       if (error) {
@@ -157,14 +162,14 @@ export default function DirectorTasksPage() {
   };
 
   // Database-ээс tasks-ийг авах
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
   // Fetch notification count
   useEffect(() => {
     getUnreadNotificationCount(userId).then(setNotificationCount);
   }, [userId]);
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
 
   const fetchTasks = async () => {
     try {
@@ -197,13 +202,28 @@ export default function DirectorTasksPage() {
       console.log('Director Tasks - Даалгавар хадгалах оролдлого...', taskData);
       console.log('Supabase URL:', (process.env as any).NEXT_PUBLIC_SUPABASE_URL);
       
+      // Ensure assigned_to is not empty string
+      console.log('Task data before validation:', taskData);
+      if (!taskData.assignedTo) {
+        alert('Олгох менежер сонгоно уу!');
+        return;
+      }
+      const assignedToId = Number(taskData.assignedTo);
+      if (!Number.isFinite(assignedToId) || assignedToId <= 0) {
+        alert('Олгох менежерийн ID буруу байна!');
+        return;
+      }
+      console.log('Task data after validation:', taskData);
+      
       const insertData = {
         task_id: `task_${Date.now()}`,
+        task_code: `T-${Date.now().toString().slice(-6)}`,
         title: taskData.title,
         description: taskData.description,
-        assigned_to: taskData.assignedTo,
+        assigned_to: assignedToId,
         due_date: taskData.dueDate,
-        status: 'Эхэлсэн',
+        priority: 'medium',
+        status: 'new',
         created_by: 1 // Director ID
       };
       
@@ -226,13 +246,13 @@ export default function DirectorTasksPage() {
       
       // Send notification to the assigned manager
       if (taskData.assignedTo) {
-        const assignedManager = managers.find(m => m.name === taskData.assignedTo);
+        const assignedManager = managers.find(m => m.id === taskData.assignedTo);
         if (assignedManager) {
           await createNotification(
             Number(assignedManager.id),
             'Шинэ даалгавар',
             `Директор танд шинэ даалгавар өглөө: ${taskData.title}`,
-            'task',
+            'info',
             '/director/tasks'
           );
         }
@@ -462,12 +482,16 @@ export default function DirectorTasksPage() {
                     <label className="block text-sm font-medium text-slate-700 mb-2">Олгох менежер</label>
                     <select
                       value={taskData.assignedTo}
-                      onChange={(e) => setTaskData({...taskData, assignedTo: e.target.value})}
+                      onChange={(e) => {
+                        const selectedManager = managers.find(m => m.id === e.target.value);
+                        setTaskData({...taskData, assignedTo: e.target.value});
+                        console.log('Selected manager:', selectedManager);
+                      }}
                       className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Менежер сонгох</option>
                       {managers.map((manager) => (
-                        <option key={manager.id} value={manager.name}>
+                        <option key={manager.id} value={manager.id}>
                           {manager.name}
                         </option>
                       ))}

@@ -1,10 +1,6 @@
-'use client';
-
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { useState } from "react";
-import { ErrorBoundary } from "./_components/ui/error-boundary";
-import { ToastContainer } from "./_components/ui/toast";
+import { LayoutClient } from "./_components/layout-client";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,31 +23,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [toasts, setToasts] = useState<Array<{
-    id: string;
-    message: string;
-    type?: 'success' | 'error' | 'warning' | 'info';
-  }>>([]);
-
-  const addToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
-    const id = Math.random().toString(36).substr(2, 9);
-    setToasts(prev => [...prev, { id, message, type }]);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
-
   return (
     <html
       lang="mn"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ErrorBoundary>
+        <LayoutClient>
           {children}
-        </ErrorBoundary>
-        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        </LayoutClient>
       </body>
     </html>
   );

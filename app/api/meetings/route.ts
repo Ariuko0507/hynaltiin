@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, description, status, meeting_date, location, organizer_id, team_id } = body;
+    const { title, status, meeting_date, location, organizer_id, team_id } = body;
+    console.log('Meeting creation data:', { title, status, meeting_date, location, organizer_id, team_id });
 
     if (!title || !meeting_date || !organizer_id) {
       return NextResponse.json(
@@ -58,15 +59,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate meeting code
-    const meeting_id = `M-${Date.now().toString().slice(-6)}`;
+    const meeting_code = `M-${Date.now().toString().slice(-6)}`;
 
     const { data, error } = await supabaseServer
       .from('meetings')
       .insert({
-        meeting_id,
+        meeting_code,
         title,
-        description,
-        status: status ?? 'Төлөвлөсөн',
+        status: 'scheduled',
         organizer_id,
         meeting_date,
         location,

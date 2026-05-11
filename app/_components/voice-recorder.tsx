@@ -137,11 +137,19 @@ export function VoiceRecorder({
       // Trigger transcription if recordId is available
       if (result.recordId && result.publicUrl) {
         console.log("Starting transcription...");
-        await transcribeRecording(result.recordId, result.publicUrl);
+        const transcriptionResult = await transcribeRecording(result.recordId, result.publicUrl);
+        if (
+          transcriptionResult &&
+          typeof transcriptionResult === 'object' &&
+          'success' in transcriptionResult &&
+          transcriptionResult.success === false
+        ) {
+          setError(`Текст хөрвүүлэлт амжилтгүй: ${String((transcriptionResult as any).error ?? '')}`);
+        }
       }
       
       // Refresh recordings list
-      const updatedRecordings = await getMeetingRecordings(meetingId);
+      const updatedRecordings = await getMeetingRecordings(meetingId, userId);
       setRecordings(updatedRecordings);
     } catch (err) {
       console.error("Error saving recording:", err);
@@ -154,7 +162,7 @@ export function VoiceRecorder({
   const handleDeleteRecording = async (filePath: string, recordId: number) => {
     try {
       await deleteMeetingRecording(filePath, recordId);
-      const updatedRecordings = await getMeetingRecordings(meetingId);
+      const updatedRecordings = await getMeetingRecordings(meetingId, userId);
       setRecordings(updatedRecordings);
     } catch (err) {
       console.error("Error deleting recording:", err);
@@ -164,9 +172,9 @@ export function VoiceRecorder({
   // Fetch recordings on mount and when meetingId changes
   useEffect(() => {
     if (meetingId) {
-      getMeetingRecordings(meetingId).then(setRecordings);
+      getMeetingRecordings(meetingId, userId).then(setRecordings);
     }
-  }, [meetingId]);
+  }, [meetingId, userId]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

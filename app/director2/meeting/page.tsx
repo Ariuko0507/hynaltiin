@@ -151,7 +151,7 @@ export default function DirectorMeetingPage() {
       if (data.meetings) {
         const formattedItems: MeetingItem[] = data.meetings.map((m: any) => ({
           id: m.id,
-          meeting_id: m.meeting_id,
+          meeting_id: m.meeting_code ?? m.meeting_id,
           title: m.title,
           status: m.status,
           organizer: m.organizer?.name || 'Директор Энх',

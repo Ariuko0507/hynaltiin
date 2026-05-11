@@ -1,0 +1,12 @@
+# Supabase Configuration
+# Replace these with your actual Supabase project values
+
+# Get these from your Supabase Project Settings > API
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Service role key (for server-side operations)
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+
+# Database URL (optional, for direct database operations)
+DATABASE_URL=postgresql://postgres:[password]@db.your-project-id.supabase.co:5432/postgres
