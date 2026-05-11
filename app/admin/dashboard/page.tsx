@@ -13,11 +13,10 @@ type AdminInfo = {
 };
 
 async function getAdminInfo(): Promise<AdminInfo> {
-  // Get admin user (assuming first admin user)
   const { data: adminUser, error: userError } = await supabase
     .from("users")
-    .select("name, email, role_id, department_id, updated_at")
-    .eq("role_id", 1) // admin role
+    .select("name, email, role, department_id, updated_at")
+    .eq("role", "admin")
     .limit(1)
     .single();
 
@@ -34,18 +33,14 @@ async function getAdminInfo(): Promise<AdminInfo> {
     };
   }
 
-  // Get department name
   const { data: department } = adminUser.department_id
     ? await supabase.from("departments").select("name").eq("id", adminUser.department_id).single()
     : { data: null };
 
-  // Get role name
-  const { data: role } = await supabase.from("roles").select("name").eq("id", adminUser.role_id).single();
-
   return {
     name: adminUser.name,
     email: adminUser.email,
-    role: role?.name === "admin" ? "Системийн админ" : role?.name || "Админ",
+    role: adminUser.role === "admin" ? "Системийн админ" : adminUser.role || "Админ",
     department: department?.name || "IT удирдлага",
     lastLogin: adminUser.updated_at ? new Date(adminUser.updated_at).toLocaleString("mn-MN") : "Тодорхойгүй",
     permissions: [

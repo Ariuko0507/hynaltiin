@@ -68,6 +68,143 @@ create table if not exists departments (
 );
 
 -- ============================================
+-- 2A. ORGANIZATIONAL HIERARCHY EXTENSIONS
+-- ============================================
+do $$
+begin
+    if not exists (
+        select 1 from information_schema.columns
+        where table_name = 'users' and column_name = 'role_id'
+    ) then
+        alter table users add column role_id integer;
+    end if;
+    if not exists (
+        select 1 from information_schema.columns
+        where table_name = 'users' and column_name = 'department_id'
+    ) then
+        alter table users add column department_id integer references departments(id) on delete set null;
+    end if;
+    if not exists (
+        select 1 from information_schema.columns
+        where table_name = 'users' and column_name = 'position'
+    ) then
+        alter table users add column position varchar(100);
+    end if;
+    if not exists (
+        select 1 from information_schema.columns
+        where table_name = 'users' and column_name = 'status'
+    ) then
+        alter table users add column status varchar(30) default 'active';
+    end if;
+    if not exists (
+        select 1 from information_schema.columns
+        where table_name = 'users' and column_name = 'is_active'
+    ) then
+        alter table users add column is_active boolean not null default true;
+    end if;
+    if not exists (
+        select 1 from information_schema.columns
+        where table_name = 'users' and column_name = 'manager_id'
+    ) then
+        alter table users add column manager_id integer references users(id) on delete set null;
+    end if;
+    if not exists (
+        select 1 from information_schema.columns
+        where table_name = 'departments' and column_name = 'code'
+    ) then
+        alter table departments add column code varchar(50);
+    end if;
+    if not exists (
+        select 1 from information_schema.columns
+        where table_name = 'departments' and column_name = 'level'
+    ) then
+        alter table departments add column level integer default 1;
+    end if;
+    if not exists (
+        select 1 from information_schema.columns
+        where table_name = 'departments' and column_name = 'is_active'
+    ) then
+        alter table departments add column is_active boolean not null default true;
+    end if;
+    if not exists (
+        select 1 from information_schema.columns
+        where table_name = 'departments' and column_name = 'manager_id'
+    ) then
+        alter table departments add column manager_id integer references users(id) on delete set null;
+    end if;
+end $$;
+
+create unique index if not exists idx_departments_code on departments(code);
+
+create table if not exists hierarchy_levels (
+    id serial primary key,
+    level_number integer unique not null,
+    title varchar(255) not null,
+    description text
+);
+
+create table if not exists roles (
+    id serial primary key,
+    name varchar(100) unique not null,
+    description text
+);
+
+do $$
+begin
+    if not exists (
+        select 1
+        from information_schema.table_constraints
+        where table_name = 'users'
+          and constraint_name = 'users_role_id_fkey'
+    ) then
+        alter table users
+        add constraint users_role_id_fkey
+        foreign key (role_id) references roles(id) on delete set null;
+    end if;
+end $$;
+
+create table if not exists positions (
+    id serial primary key,
+    name varchar(150) unique not null,
+    description text,
+    level integer not null,
+    min_reports integer not null default 0,
+    max_reports integer not null default 0,
+    is_active boolean not null default true
+);
+
+create table if not exists management_assignments (
+    id bigserial primary key,
+    user_id integer not null references users(id) on delete cascade,
+    department_id integer not null references departments(id) on delete cascade,
+    assignment_type varchar(100) not null,
+    assignment_date date not null default current_date,
+    is_primary boolean not null default true,
+    unique (user_id, department_id, assignment_type)
+);
+
+create table if not exists reporting_chains (
+    id bigserial primary key,
+    user_id integer not null references users(id) on delete cascade,
+    direct_manager_id integer not null references users(id) on delete cascade,
+    hierarchy_level_id integer not null references hierarchy_levels(id) on delete restrict,
+    effective_date date not null default current_date,
+    is_current boolean not null default true,
+    unique (user_id, direct_manager_id, hierarchy_level_id, effective_date)
+);
+
+create table if not exists organizational_structure (
+    id bigserial primary key,
+    user_id integer not null references users(id) on delete cascade,
+    department_id integer references departments(id) on delete set null,
+    position_level integer not null,
+    reporting_to_user_id integer references users(id) on delete set null,
+    effective_date date not null default current_date,
+    is_active boolean not null default true,
+    unique (user_id, effective_date)
+);
+
+-- ============================================
 -- 3. TEAMS TABLE
 -- ============================================
 create table if not exists teams (
@@ -249,6 +386,12 @@ create index if not exists idx_meetings_meeting_date on meetings(meeting_date);
 -- Meeting recordings indexes
 CREATE INDEX IF NOT EXISTS idx_meeting_recordings_meeting_id ON meeting_recordings(meeting_id);
 CREATE INDEX IF NOT EXISTS idx_meeting_recordings_user_id ON meeting_recordings(user_id);
+CREATE INDEX IF NOT EXISTS idx_users_role_id ON users(role_id);
+CREATE INDEX IF NOT EXISTS idx_users_department_id ON users(department_id);
+CREATE INDEX IF NOT EXISTS idx_users_manager_id ON users(manager_id);
+CREATE INDEX IF NOT EXISTS idx_departments_manager_id ON departments(manager_id);
+CREATE INDEX IF NOT EXISTS idx_reporting_chains_user_id ON reporting_chains(user_id);
+CREATE INDEX IF NOT EXISTS idx_organizational_structure_user_id ON organizational_structure(user_id);
 
 -- ============================================
 -- 10. RLS POLICIES
@@ -410,6 +553,56 @@ ON CONFLICT (id) DO UPDATE SET
     email = excluded.email,
     name = excluded.name,
     role = excluded.role;
+
+insert into public.hierarchy_levels (level_number, title, description)
+values
+  (1, 'Executive Director', 'Top-level strategic leadership'),
+  (2, 'Director', 'Senior strategic leadership'),
+  (3, 'Manager', 'Middle management - coordinates all departments'),
+  (4, 'Department Head', 'Leads and manages individual department'),
+  (5, 'Team Leader', 'Leads teams within a department'),
+  (6, 'Employee', 'Individual contributor')
+on conflict (level_number) do nothing;
+
+insert into public.roles (name, description)
+values
+  ('admin', 'System administrator'),
+  ('director', 'Executive director overseeing organization'),
+  ('manager', 'Central manager coordinating departments'),
+  ('department_head', 'Head of department'),
+  ('team_leader', 'Leader of team within department'),
+  ('employee', 'Individual contributor')
+on conflict (name) do nothing;
+
+insert into public.positions (name, description, level, min_reports, max_reports, is_active)
+values
+  ('Director', 'Executive director position', 2, 1, 5, true),
+  ('Manager', 'Central manager coordinating all departments', 3, 6, 6, true),
+  ('Department Head', 'Head of individual department', 4, 1, 10, true),
+  ('Team Leader', 'Leader of a team', 5, 1, 8, true),
+  ('Employee', 'Individual contributor', 6, 0, 0, true)
+on conflict (name) do nothing;
+
+insert into public.departments (name, code, description, level, is_active)
+values
+  ('Finance Department', 'DEPT_FIN', 'Financial management and accounting', 1, true),
+  ('Human Resources Department', 'DEPT_HR', 'Human resources and personnel', 1, true),
+  ('Operations Department', 'DEPT_OPS', 'Business operations and logistics', 1, true),
+  ('Sales Department', 'DEPT_SALES', 'Sales and business development', 1, true),
+  ('Marketing Department', 'DEPT_MKT', 'Marketing and communications', 1, true),
+  ('Technology Department', 'DEPT_TECH', 'Information technology and systems', 1, true)
+on conflict (code) do nothing;
+
+insert into public.teams (team_code, name, department_id, description, is_active)
+select
+  replace(code, 'DEPT_', 'TEAM_'),
+  replace(name, 'Department', 'Team'),
+  id,
+  'Primary operational team for ' || name,
+  true
+from public.departments
+where code in ('DEPT_FIN', 'DEPT_HR', 'DEPT_OPS', 'DEPT_SALES', 'DEPT_MKT', 'DEPT_TECH')
+on conflict (team_code) do nothing;
 
 -- ============================================
 -- 14. STORAGE BUCKET NOTE

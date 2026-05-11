@@ -1,11 +1,9 @@
-//manager/meeting/page.tsx
+//mployee/meeting/page.tsx//
 "use client";
 
 import { useState, useEffect } from "react";
-import { ManagerShell } from "../_components/manager-shell";
-import { getUnreadNotificationCount } from "@/app/_lib/notifications";
+import { EmployeeShell } from "../_components/employee-shell";
 import { VoiceRecorder } from "@/app/_components/voice-recorder";
-import { audienceGroups, meetingTypeOptions } from "@/lib/workflow-config";
 
 type MeetingStatus = "Төлөвлөсөн" | "Баталгаажсан" | "Цуцлагдсан";
 
@@ -21,200 +19,47 @@ type MeetingItem = {
   description?: string;
   manager_reaction?: string;
   manager_comment?: string;
-  team_id?: number;
 };
 
-type MeetingApiItem = {
-  id: number;
-  meeting_id: string;
-  title: string;
-  status: MeetingStatus;
-  organizer?: { name?: string | null } | null;
-  organizer_id: number;
-  meeting_date: string;
-  location?: string | null;
-  description?: string | null;
-  manager_reaction?: string | null;
-  manager_comment?: string | null;
-  team_id?: number | null;
-};
 
 function getStatusClasses(status: MeetingStatus) {
-  if (status === "Баталгаажсан") return "bg-emerald-100 text-emerald-700";
-  if (status === "Төлөвлөсөн") return "bg-sky-100 text-sky-700";
+  if (status === "Баталгаажсан") {
+    return "bg-emerald-100 text-emerald-700";
+  }
+
+  if (status === "Төлөвлөсөн") {
+    return "bg-sky-100 text-sky-700";
+  }
+
   return "bg-rose-100 text-rose-700";
 }
 
-
-export default function ManagerMeetingPage() {
-  type AudienceMode = "all" | "selected" | "department";
-
-  const [notificationCount, setNotificationCount] = useState(0);
-  const userId = 2; // TODO: Get from auth context
+export default function EmployeeMeetingPage() {
   const [items, setItems] = useState<MeetingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<MeetingItem | null>(null);
-  const [showReactionForm, setShowReactionForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'confirmed'>('all');
   const [newMeeting, setNewMeeting] = useState({
     title: "",
+    status: "Төлөвлөсөн" as MeetingStatus,
     date: "",
-    time: "",
     location: "",
     description: "",
-    status: "Төлөвлөсөн" as MeetingStatus,
-    meetingType: "all_hands",
-    audienceMode: "all" as AudienceMode,
-    audienceGroup: "Бүх хэлтэс",
-    participants: ["Director 1", "Director 2", "Manager", "Department Heads", "Leaders"],
   });
-  const [reaction, setReaction] = useState({
-    status: "Баталгаажсан" as MeetingStatus,
-    manager_reaction: "",
-    manager_comment: ""
-  });
+  const userId = 4; // TODO: Get from auth context
 
-  // Таб state
-  const [activeTab, setActiveTab] = useState<'all' | 'team'>('all');
-
-  // Багийн хуралнууд
-  const teamMeetings = items.filter(item => 
-    item.title.includes('Багийн') || 
-    item.title.includes('сарын') || 
-    item.title.includes('ажилтан')
-  );
-
-  const participantOptions = [
-    "Director 1",
-    "Director 2",
-    "Manager",
-    "Department Heads",
-    "Finance Team",
-    "HR Team",
-    "Operations Team",
-    "Sales Team",
-    "Marketing Team",
-    "Technology Team",
-    "Leaders",
-    "Employees",
-  ];
-
-  const selectedMeetingType = meetingTypeOptions.find((item) => item.id === newMeeting.meetingType) ?? meetingTypeOptions[0];
-
-  const handleMeetingTypeChange = (meetingTypeId: string) => {
-    const targetType = meetingTypeOptions.find((item) => item.id === meetingTypeId) ?? meetingTypeOptions[0];
-    setNewMeeting((current) => ({
-      ...current,
-      meetingType: meetingTypeId,
-      audienceMode:
-        targetType.audienceMode === "all"
-          ? "all"
-          : targetType.audienceMode === "selected"
-            ? "selected"
-            : "department",
-      participants:
-        targetType.audienceMode === "all"
-          ? ["Director 1", "Director 2", "Manager", "Department Heads", "Leaders"]
-          : current.participants,
-    }));
-  };
-
-  const handleParticipantToggle = (participant: string) => {
-    setNewMeeting((current) => ({
-      ...current,
-      participants: current.participants.includes(participant)
-        ? current.participants.filter((item) => item !== participant)
-        : [...current.participants, participant],
-    }));
-  };
-
-  const handleSend = async () => {
-    if (!newMeeting.title.trim() || !newMeeting.date) {
-      alert("Гарчиг, огноо оруулна уу");
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/meetings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: `[${selectedMeetingType.label}] ${newMeeting.title}`,
-          description:
-            `${newMeeting.description}\n\n` +
-            `Хурлын төрөл: ${selectedMeetingType.label}\n` +
-            `Хүртээмж: ${
-              newMeeting.audienceMode === "all"
-                ? "Нийтээр"
-                : newMeeting.audienceMode === "department"
-                  ? `Хэлтсээр - ${newMeeting.audienceGroup}`
-                  : "Сонгомол"
-            }\n` +
-            `Оролцогчид: ${newMeeting.participants.join(", ")}`,
-          status: newMeeting.status,
-          meeting_date: newMeeting.date,
-          location: newMeeting.location,
-          organizer_id: userId,
-        }),
-      });
-
-      if (response.ok) {
-        await fetchMeetings();
-        setNewMeeting({
-          title: "",
-          date: "",
-          time: "",
-          location: "",
-          description: "",
-          status: "Төлөвлөсөн" as MeetingStatus,
-          meetingType: "all_hands",
-          audienceMode: "all" as AudienceMode,
-          audienceGroup: "Бүх хэлтэс",
-          participants: ["Director 1", "Director 2", "Manager", "Department Heads", "Leaders"],
-        });
-        setShowForm(false);
-      }
-    } catch (error) {
-      console.error('Error creating meeting:', error);
-    }
-  };
-
-  const handleReaction = async () => {
-    if (!selectedMeeting) return;
-
-    try {
-      const response = await fetch(`/api/meetings/${selectedMeeting.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: reaction.status,
-          manager_reaction: reaction.manager_reaction,
-          manager_comment: reaction.manager_comment,
-        }),
-      });
-
-      if (response.ok) {
-        await fetchMeetings();
-        setShowReactionForm(false);
-        setReaction({ status: "Баталгаажсан", manager_reaction: "", manager_comment: "" });
-      }
-    } catch (error) {
-      console.error('Error updating meeting:', error);
-    }
-  };
-
-  // Fetch notification count and meetings
+  // Fetch meetings from database
   useEffect(() => {
-    getUnreadNotificationCount(userId).then(setNotificationCount);
     fetchMeetings();
-  }, [userId]);
+  }, []);
 
   const fetchMeetings = async () => {
     try {
-      const response = await fetch(`/api/meetings?userId=${userId}&userRole=manager`);
+      const response = await fetch(`/api/meetings?userId=${userId}&userRole=employee`);
       const data = await response.json();
       if (data.meetings) {
-        const formattedMeetings = (data.meetings as MeetingApiItem[]).map((m) => ({
+        const formattedMeetings = data.meetings.map((m: any) => ({
           id: m.id,
           meeting_id: m.meeting_id,
           title: m.title,
@@ -226,7 +71,6 @@ export default function ManagerMeetingPage() {
           description: m.description,
           manager_reaction: m.manager_reaction,
           manager_comment: m.manager_comment,
-          team_id: m.team_id,
         }));
         setItems(formattedMeetings);
       }
@@ -237,20 +81,50 @@ export default function ManagerMeetingPage() {
     }
   };
 
+  // Баталгаажсан хурлууд
+  const confirmedMeetings = items.filter(item => item.status === "Баталгаажсан");
+
+  const handleSend = async () => {
+    if (!newMeeting.title || !newMeeting.date || !newMeeting.location) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newMeeting.title,
+          description: newMeeting.description,
+          status: newMeeting.status,
+          meeting_date: newMeeting.date,
+          location: newMeeting.location,
+          organizer_id: userId,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchMeetings();
+        setNewMeeting({ title: "", status: "Төлөвлөсөн", date: "", location: "", description: "" });
+        setShowForm(false);
+      }
+    } catch (error) {
+      console.error('Error creating meeting:', error);
+    }
+  };
+
   return (
-    <ManagerShell
-      currentPath="/manager/meeting"
+    <EmployeeShell
+      currentPath="/employee/meeting"
       kicker="Meetings"
       title="Хурал, уулзалтын хуваарь"
-      description="Багийн хурал, уулзалтыг товлон, хуваарь гаргах."
+      description="Өөрийн оролцох хурал, зохион байгуулагч, хугацаа болон байршлыг нэг ижил загвартайгаар харж, шаардлагатай үед шинэ уулзалт үүсгэнэ."
       stats={[
-        { label: "Энэ 7 хоног", value: "3" },
-        { label: "Баталгаажсан", value: "1" },
-        { label: "Төлөвлөсөн", value: "2" },
-        { label: "Цуцлагдсан", value: "0" },
+        { label: "Энэ 7 хоног", value: "5" },
+        { label: "Баталгаажсан", value: "3" },
+        { label: "Төлөвлөсөн", value: "1" },
+        { label: "Цуцлагдсан", value: "1" },
       ]}
-      notifications={notificationCount}
-      userId={userId}
       action={
         <button
           type="button"
@@ -273,66 +147,27 @@ export default function ManagerMeetingPage() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <label className="block">
-              <span className="text-sm font-medium text-slate-700">Хурлын төрөл</span>
-              <select
-                value={newMeeting.meetingType}
-                onChange={(e) => handleMeetingTypeChange(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
-              >
-                {meetingTypeOptions.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-2 text-xs leading-5 text-slate-500">{selectedMeetingType.description}</p>
-            </label>
-
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Хүртээмжийн төрөл</span>
-              <select
-                value={newMeeting.audienceMode}
-                onChange={(e) => setNewMeeting((c) => ({ ...c, audienceMode: e.target.value as AudienceMode }))}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
-              >
-                <option value="all">Нийтээр</option>
-                <option value="department">Хэлтсээр</option>
-                <option value="selected">Сонгомол</option>
-              </select>
-            </label>
-
-            <label className="block">
               <span className="text-sm font-medium text-slate-700">Гарчиг</span>
               <input
                 type="text"
                 value={newMeeting.title}
-                onChange={(e) => setNewMeeting((c) => ({ ...c, title: e.target.value }))}
+                onChange={(event) =>
+                  setNewMeeting((current) => ({ ...current, title: event.target.value }))
+                }
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
               />
             </label>
-
-            {newMeeting.audienceMode === "department" ? (
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700">Хэлтэс</span>
-                <select
-                  value={newMeeting.audienceGroup}
-                  onChange={(e) => setNewMeeting((c) => ({ ...c, audienceGroup: e.target.value }))}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
-                >
-                  {audienceGroups.map((group) => (
-                    <option key={group} value={group}>
-                      {group}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
 
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Төлөв</span>
               <select
                 value={newMeeting.status}
-                onChange={(e) => setNewMeeting((c) => ({ ...c, status: e.target.value as MeetingStatus }))}
+                onChange={(event) =>
+                  setNewMeeting((current) => ({
+                    ...current,
+                    status: event.target.value as MeetingStatus,
+                  }))
+                }
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
               >
                 <option value="Төлөвлөсөн">Төлөвлөсөн</option>
@@ -346,7 +181,9 @@ export default function ManagerMeetingPage() {
               <input
                 type="datetime-local"
                 value={newMeeting.date}
-                onChange={(e) => setNewMeeting((c) => ({ ...c, date: e.target.value }))}
+                onChange={(event) =>
+                  setNewMeeting((current) => ({ ...current, date: event.target.value }))
+                }
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
               />
             </label>
@@ -356,45 +193,12 @@ export default function ManagerMeetingPage() {
               <input
                 type="text"
                 value={newMeeting.location}
-                onChange={(e) => setNewMeeting((c) => ({ ...c, location: e.target.value }))}
+                onChange={(event) =>
+                  setNewMeeting((current) => ({ ...current, location: event.target.value }))
+                }
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
               />
             </label>
-          </div>
-
-          <div className="mt-6 rounded-[26px] border border-slate-200 bg-slate-50 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Оролцогчид</p>
-                <h3 className="mt-2 text-lg font-semibold text-slate-950">Хэнд мэдэгдэл очихыг сонгох</h3>
-              </div>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                {newMeeting.participants.length} сонгосон
-              </span>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {participantOptions.map((participant) => {
-                const checked = newMeeting.participants.includes(participant);
-                return (
-                  <button
-                    key={participant}
-                    type="button"
-                    onClick={() => handleParticipantToggle(participant)}
-                    className={`rounded-2xl border px-4 py-3 text-left text-sm transition ${
-                      checked
-                        ? "border-slate-950 bg-slate-950 text-white"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                    }`}
-                  >
-                    {participant}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-4 rounded-2xl bg-white p-4 text-sm leading-6 text-slate-600">
-              Энэ хурлыг үүсгэхэд сонгогдсон оролцогчид болон шаардлагатай бусад хэлтэст мэдэгдэл очно.
-              Нийтээр хурал бол бүх хэлтэс, сонгомол бол зөвхөн дээрх оролцогчид, хэлтсээр бол сонгосон бүлэгт түгээгдэнэ.
-            </div>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
@@ -437,14 +241,14 @@ export default function ManagerMeetingPage() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('team')}
+              onClick={() => setActiveTab('confirmed')}
               className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
-                activeTab === 'team'
+                activeTab === 'confirmed'
                   ? 'bg-white text-slate-950 shadow-sm'
                   : 'text-slate-600 hover:text-slate-950'
               }`}
             >
-              Багийн хурал ({teamMeetings.length})
+              Баталгаажсан ({confirmedMeetings.length})
             </button>
           </div>
         </div>
@@ -469,14 +273,14 @@ export default function ManagerMeetingPage() {
                       Ачааллаж байна...
                     </td>
                   </tr>
-                ) : (activeTab === 'all' ? items : teamMeetings).length === 0 ? (
+                ) : (activeTab === 'all' ? items : confirmedMeetings).length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                       Хурал олдсонгүй
                     </td>
                   </tr>
                 ) : (
-                  (activeTab === 'all' ? items : teamMeetings).map((item) => (
+                  (activeTab === 'all' ? items : confirmedMeetings).map((item) => (
                     <tr key={item.id}>
                       <td className="px-4 py-4 font-medium text-slate-950">{item.meeting_id}</td>
                       <td className="px-4 py-4 text-slate-700">
@@ -486,7 +290,11 @@ export default function ManagerMeetingPage() {
                       <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
                       <td className="px-4 py-4 text-slate-700">{item.date}</td>
                       <td className="px-4 py-4">
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(item.status)}`}>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                            item.status
+                          )}`}
+                        >
                           {item.status}
                         </span>
                       </td>
@@ -498,16 +306,9 @@ export default function ManagerMeetingPage() {
           </div>
         </div>
 
-        {activeTab === 'team' && teamMeetings.length === 0 && (
+        {activeTab === 'confirmed' && confirmedMeetings.length === 0 && (
           <div className="mt-4 rounded-2xl bg-slate-50 p-6 text-center">
-            <p className="text-sm text-slate-600">Багийн хурал олдсонгүй</p>
-            <button
-              type="button"
-              onClick={() => setShowForm(true)}
-              className="mt-3 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Багийн хурал үүсгэх
-            </button>
+            <p className="text-sm text-slate-600">Баталгаажсан хурал олдсонгүй</p>
           </div>
         )}
       </section>
@@ -557,7 +358,11 @@ export default function ManagerMeetingPage() {
                         <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
                         <td className="px-4 py-4 text-slate-700">{item.date}</td>
                         <td className="px-4 py-4">
-                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(item.status)}`}>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                              item.status
+                            )}`}
+                          >
                             {item.status}
                           </span>
                         </td>
@@ -647,69 +452,8 @@ export default function ManagerMeetingPage() {
               />
             </div>
 
-            {/* Manager Reaction Form */}
-            {showReactionForm && (
-              <div className="mt-6 rounded-2xl bg-slate-50 p-4">
-                <p className="mb-4 text-xs uppercase tracking-[0.3em] text-slate-400">Менежерийн хариу</p>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="block">
-                    <span className="text-sm font-medium text-slate-700">Төлөв</span>
-                    <select
-                      value={reaction.status}
-                      onChange={(e) => setReaction((c) => ({ ...c, status: e.target.value as MeetingStatus }))}
-                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-slate-400"
-                    >
-                      <option value="Төлөвлөсөн">Төлөвлөсөн</option>
-                      <option value="Баталгаажсан">Баталгаажсан</option>
-                      <option value="Цуцлагдсан">Цуцлагдсан</option>
-                    </select>
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-medium text-slate-700">Хариу</span>
-                    <input
-                      type="text"
-                      value={reaction.manager_reaction}
-                      onChange={(e) => setReaction((c) => ({ ...c, manager_reaction: e.target.value }))}
-                      placeholder="Жишээ: Зөвшөөрсөн, Хоцорсон гэх мэт"
-                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-slate-400"
-                    />
-                  </label>
-                  <label className="block md:col-span-2">
-                    <span className="text-sm font-medium text-slate-700">Санал</span>
-                    <textarea
-                      value={reaction.manager_comment}
- onChange={(e) => setReaction((c) => ({ ...c, manager_comment: e.target.value }))}
-                      placeholder="Нэмэлт тайлбар"
-                      rows={3}
-                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-slate-400"
-                    />
-                  </label>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    onClick={handleReaction}
-                    className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                  >
-                    Илгээх
-                  </button>
-                  <button
-                    onClick={() => setShowReactionForm(false)}
-                    className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-50"
-                  >
-                    Цуцлах
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Action Buttons */}
             <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                onClick={() => setShowReactionForm(!showReactionForm)}
-                className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-              >
-                {showReactionForm ? 'Хаах' : 'Хариу өгөх'}
-              </button>
               <button
                 onClick={() => setSelectedMeeting(null)}
                 className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-50"
@@ -720,6 +464,6 @@ export default function ManagerMeetingPage() {
           </div>
         </div>
       )}
-    </ManagerShell>
+    </EmployeeShell>
   );
 }

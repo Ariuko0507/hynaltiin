@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AdminShell } from "../_components/admin-shell";
 
-type RoleName = "admin" | "director" | "manager" | "employee";
+type RoleName = "admin" | "director" | "manager" | "department_head" | "team_leader" | "employee";
 type UserStatus = "active" | "inactive" | "suspended";
 
 type ManagedUser = {
@@ -64,6 +64,8 @@ const roleLabel: Record<RoleName, string> = {
   admin: "Админ",
   director: "Директор",
   manager: "Менежер",
+  department_head: "Хэлтсийн дарга",
+  team_leader: "Багийн ахлагч",
   employee: "Ажилтан",
 };
 
@@ -83,21 +85,38 @@ const roleClasses: Record<RoleName, string> = {
   admin: "bg-indigo-100 text-indigo-700",
   director: "bg-sky-100 text-sky-700",
   manager: "bg-amber-100 text-amber-700",
+  department_head: "bg-cyan-100 text-cyan-700",
+  team_leader: "bg-orange-100 text-orange-700",
   employee: "bg-emerald-100 text-emerald-700",
 };
 
 const nowString = () => new Date().toLocaleString("sv-SE").replace("T", " ");
+const nextSequenceId = (prefix: string, count: number) => `${prefix}-${String(count + 1).padStart(3, "0")}`;
 
 const initialUsers: ManagedUser[] = [
   { id: 1, name: "Админ Бат", email: "admin@example.com", role: "admin", department: "Админ", status: "active" },
-  { id: 2, name: "Директор Энх", email: "director@example.com", role: "director", department: "Удирдах", status: "active" },
-  { id: 3, name: "Менежер Тэмүүжин", email: "manager@example.com", role: "manager", department: "Менежмент", status: "active" },
-  { id: 4, name: "Ажилтан Сарнай", email: "employee@example.com", role: "employee", department: "Үйл ажиллагаа", status: "active" },
+  { id: 2, name: "Батаар Director 1", email: "bataar.director1@company.com", role: "director", department: "Executive", status: "active" },
+  { id: 3, name: "Тэмүүжин Director 2", email: "temujin.director2@company.com", role: "director", department: "Executive", status: "active" },
+  { id: 4, name: "Хэнбиш Manager", email: "khenbish.manager@company.com", role: "manager", department: "Management", status: "active" },
+  { id: 5, name: "Энх Finance", email: "enkh.fin@company.com", role: "department_head", department: "Finance", status: "active" },
+  { id: 6, name: "Энх HR", email: "enkh.hr@company.com", role: "department_head", department: "HR", status: "active" },
+  { id: 7, name: "Энх Operations", email: "enkh.ops@company.com", role: "department_head", department: "Operations", status: "active" },
+  { id: 8, name: "Энх Sales", email: "enkh.sales@company.com", role: "department_head", department: "Sales", status: "active" },
+  { id: 9, name: "Энх Marketing", email: "enkh.mkt@company.com", role: "department_head", department: "Marketing", status: "active" },
+  { id: 10, name: "Энх Technology", email: "enkh.tech@company.com", role: "department_head", department: "Technology", status: "active" },
+  { id: 11, name: "Оюу Leader 1", email: "oyu.leader1@company.com", role: "team_leader", department: "Finance", status: "active" },
+  { id: 12, name: "Сарнай Leader 2", email: "sarnai.leader2@company.com", role: "team_leader", department: "HR", status: "active" },
+  { id: 13, name: "Түвшин Leader 3", email: "tuvshin.leader3@company.com", role: "team_leader", department: "Operations", status: "active" },
+  { id: 14, name: "Нара Leader 4", email: "nara.leader4@company.com", role: "team_leader", department: "Sales", status: "active" },
+  { id: 15, name: "Болд Leader 5", email: "bold.leader5@company.com", role: "team_leader", department: "Marketing", status: "active" },
+  { id: 16, name: "Ганзориг Leader 6", email: "ganzorig.leader6@company.com", role: "team_leader", department: "Technology", status: "active" },
 ];
 
 const initialPolicies: RolePolicy[] = [
   { role: "director", permissions: "Батлах, тайлан харах, department-н гүйцэтгэл хянах" },
   { role: "manager", permissions: "Task хуваарилах, баг хянах, анхан шатны шалгалт хийх" },
+  { role: "department_head", permissions: "Хэлтсийн ажил хуваарилах, leader-ийн биелэлт шалгах" },
+  { role: "team_leader", permissions: "Багийн өдөр тутмын гүйцэтгэлийг удирдах, тайлан нэгтгэх" },
   { role: "employee", permissions: "Task гүйцэтгэх, тайлан оруулах, биелэлт илгээх" },
 ];
 
@@ -119,7 +138,7 @@ export default function AdminUsersPage() {
 
   const writeLog = (action: string, target: string) => {
     const next: ActivityLog = {
-      id: `LOG-${Date.now()}`,
+      id: nextSequenceId("LOG", activityLogs.length),
       actor: "Админ Бат",
       action,
       target,
@@ -195,7 +214,7 @@ export default function AdminUsersPage() {
   }, [instructions]);
 
   const reviewableUsers = useMemo(
-    () => users.filter((user) => user.role === "director" || user.role === "manager" || user.role === "employee"),
+    () => users.filter((user) => user.role !== "admin"),
     [users]
   );
 
@@ -203,6 +222,8 @@ export default function AdminUsersPage() {
     () => ({
       directors: users.filter((user) => user.role === "director").length,
       managers: users.filter((user) => user.role === "manager").length,
+      departmentHeads: users.filter((user) => user.role === "department_head").length,
+      teamLeaders: users.filter((user) => user.role === "team_leader").length,
       employees: users.filter((user) => user.role === "employee").length,
       inactive: users.filter((user) => user.status !== "active").length,
     }),
@@ -298,7 +319,7 @@ export default function AdminUsersPage() {
   };
 
   const handlePolicySave = () => {
-    writeLog("Role policy шинэчилсэн", "Director/Manager/Employee");
+    writeLog("Role policy шинэчилсэн", "Director/Manager/Department Head/Team Leader/Employee");
     setMessage("Role policy шинэчлэлтүүд хадгалагдлаа.");
   };
 
@@ -313,7 +334,7 @@ export default function AdminUsersPage() {
 
     if (!existing) {
       const next: SystemInstruction = {
-        id: `INS-${Date.now()}`,
+        id: nextSequenceId("INS", instructions.length),
         title: instructionForm.title.trim(),
         targetRole: instructionForm.targetRole,
         content: instructionForm.content.trim(),
@@ -354,8 +375,8 @@ export default function AdminUsersPage() {
       description="Админ бүх хэрэглэгч, role policy, заавар, audit лог болон алдааны task урсгалыг төвлөрсөн байдлаар хянаж удирдана."
       stats={[
         { label: "Нийт хэрэглэгч", value: String(users.length) },
-        { label: "Идэвхгүй", value: String(roleStats.inactive) },
-        { label: "Заавар", value: String(instructions.length) },
+        { label: "Хэлтсийн дарга", value: String(roleStats.departmentHeads) },
+        { label: "Багийн ахлагч", value: String(roleStats.teamLeaders) },
         { label: "Audit лог", value: String(activityLogs.length) },
       ]}
       noteText="Submit хийсэн task-г админ overwrite хийхгүй, алдаа бол task-ээр зааж хадгалдаг сахилга баттай урсгалыг мөрдөнө."
@@ -398,6 +419,8 @@ export default function AdminUsersPage() {
             >
               <option value="director">Директор</option>
               <option value="manager">Менежер</option>
+              <option value="department_head">Хэлтсийн дарга</option>
+              <option value="team_leader">Багийн ахлагч</option>
               <option value="employee">Ажилтан</option>
             </select>
             <button
@@ -463,6 +486,8 @@ export default function AdminUsersPage() {
                             >
                               <option value="director">Директор</option>
                               <option value="manager">Менежер</option>
+                              <option value="department_head">Хэлтсийн дарга</option>
+                              <option value="team_leader">Багийн ахлагч</option>
                               <option value="employee">Ажилтан</option>
                             </select>
                           ) : null}
@@ -566,6 +591,8 @@ export default function AdminUsersPage() {
             >
               <option value="director">Директор</option>
               <option value="manager">Менежер</option>
+              <option value="department_head">Хэлтсийн дарга</option>
+              <option value="team_leader">Багийн ахлагч</option>
               <option value="employee">Ажилтан</option>
             </select>
             <textarea

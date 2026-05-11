@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Hierarchy Levels -->
+        <record id="hierarchy_level_director" model="hierarchy.levels">
+            <field name="level_number">2</field>
+            <field name="title">Director</field>
+            <field name="description">Senior strategic leadership</field>
+        </record>
+        
+        <record id="hierarchy_level_manager" model="hierarchy.levels">
+            <field name="level_number">3</field>
+            <field name="title">Manager</field>
+            <field name="description">Middle management - coordinates all departments</field>
+        </record>
+        
+        <record id="hierarchy_level_dept_head" model="hierarchy.levels">
+            <field name="level_number">4</field>
+            <field name="title">Department Head</field>
+            <field name="description">Leads and manages individual department</field>
+        </record>
+        
+        <record id="hierarchy_level_team_leader" model="hierarchy.levels">
+            <field name="level_number">5</field>
+            <field name="title">Team Leader</field>
+            <field name="description">Leads teams within a department</field>
+        </record>
+
+        <!-- Roles -->
+        <record id="role_director" model="roles">
+            <field name="name">director</field>
+            <field name="description">Executive director overseeing organization</field>
+        </record>
+        
+        <record id="role_manager" model="roles">
+            <field name="name">manager</field>
+            <field name="description">Central manager coordinating departments</field>
+        </record>
+        
+        <record id="role_department_head" model="roles">
+            <field name="name">department_head</field>
+            <field name="description">Head of department</field>
+        </record>
+        
+        <record id="role_team_leader" model="roles">
+            <field name="name">team_leader</field>
+            <field name="description">Leader of team within department</field>
+        </record>
+
+        <!-- Positions -->
+        <record id="position_director" model="positions">
+            <field name="name">Director</field>
+            <field name="description">Executive Director position</field>
+            <field name="level">2</field>
+            <field name="min_reports">1</field>
+            <field name="max_reports">5</field>
+            <field name="is_active" eval="True"/>
+        </record>
+        
+        <record id="position_manager" model="positions">
+            <field name="name">Manager</field>
+            <field name="description">Central Manager coordinating all departments</field>
+            <field name="level">3</field>
+            <field name="min_reports">6</field>
+            <field name="max_reports">6</field>
+            <field name="is_active" eval="True"/>
+        </record>
+        
+        <record id="position_department_head" model="positions">
+            <field name="name">Department Head</field>
+            <field name="description">Head of individual department</field>
+            <field name="level">4</field>
+            <field name="min_reports">1</field>
+            <field name="max_reports">10</field>
+            <field name="is_active" eval="True"/>
+        </record>
+        
+        <record id="position_team_leader" model="positions">
+            <field name="name">Team Leader</field>
+            <field name="description">Leader of a team</field>
+            <field name="level">5</field>
+            <field name="min_reports">3</field>
+            <field name="max_reports">8</field>
+            <field name="is_active" eval="True"/>
+        </record>
+
+        <!-- Departments -->
+        <record id="dept_finance" model="departments">
+            <field name="name">Finance Department</field>
+            <field name="code">DEPT_FIN</field>
+            <field name="description">Financial management and accounting</field>
+            <field name="level">1</field>
+            <field name="is_active" eval="True"/>
+        </record>
+        
+        <record id="dept_hr" model="departments">
+            <field name="name">Human Resources Department</field>
+            <field name="code">DEPT_HR</field>
+            <field name="description">Human resources and personnel</field>
+            <field name="level">1</field>
+            <field name="is_active" eval="True"/>
+        </record>
+        
+        <record id="dept_operations" model="departments">
+            <field name="name">Operations Department</field>
+            <field name="code">DEPT_OPS</field>
+            <field name="description">Business operations and logistics</field>
+            <field name="level">1</field>
+            <field name="is_active" eval="True"/>
+        </record>
+        
+        <record id="dept_sales" model="departments">
+            <field name="name">Sales Department</field>
+            <field name="code">DEPT_SALES</field>
+            <field name="description">Sales and business development</field>
+            <field name="level">1</field>
+            <field name="is_active" eval="True"/>
+        </record>
+        
+        <record id="dept_marketing" model="departments">
+            <field name="name">Marketing Department</field>
+            <field name="code">DEPT_MKT</field>
+            <field name="description">Marketing and communications</field>
+            <field name="level">1</field>
+            <field name="is_active" eval="True"/>
+        </record>
+        
+        <record id="dept_technology" model="departments">
+            <field name="name">Technology Department</field>
+            <field name="code">DEPT_TECH</field>
+            <field name="description">Information technology and systems</field>
+            <field name="level">1</field>
+            <field name="is_active" eval="True"/>
+        </record>
+
+        <!-- Users - Directors -->
+        <record id="user_director1" model="users">
+            <field name="name">Bataar Director 1</field>
+            <field name="email">bataar.director1@company.com</field>
+            <field name="role_id" ref="role_director"/>
+            <field name="position">director</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+        </record>
+        
+        <record id="user_director2" model="users">
+            <field name="name">Temüjin Director 2</field>
+            <field name="email">temujin.director2@company.com</field>
+            <field name="role_id" ref="role_director"/>
+            <field name="position">director</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_director1"/>
+        </record>
+
+        <!-- Users - Manager -->
+        <record id="user_manager" model="users">
+            <field name="name">Khenbish Manager</field>
+            <field name="email">khenbish.manager@company.com</field>
+            <field name="role_id" ref="role_manager"/>
+            <field name="position">manager</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_director1"/>
+        </record>
+
+        <!-- Users - Department Heads -->
+        <record id="user_dept_head_finance" model="users">
+            <field name="name">Enkh Finance Head</field>
+            <field name="email">enkh.fin@company.com</field>
+            <field name="role_id" ref="role_department_head"/>
+            <field name="position">department_head</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_manager"/>
+            <field name="department_id" ref="dept_finance"/>
+        </record>
+        
+        <record id="user_dept_head_hr" model="users">
+            <field name="name">Enkh HR Head</field>
+            <field name="email">enkh.hr@company.com</field>
+            <field name="role_id" ref="role_department_head"/>
+            <field name="position">department_head</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_manager"/>
+            <field name="department_id" ref="dept_hr"/>
+        </record>
+        
+        <record id="user_dept_head_operations" model="users">
+            <field name="name">Enkh Operations Head</field>
+            <field name="email">enkh.ops@company.com</field>
+            <field name="role_id" ref="role_department_head"/>
+            <field name="position">department_head</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_manager"/>
+            <field name="department_id" ref="dept_operations"/>
+        </record>
+        
+        <record id="user_dept_head_sales" model="users">
+            <field name="name">Enkh Sales Head</field>
+            <field name="email">enkh.sales@company.com</field>
+            <field name="role_id" ref="role_department_head"/>
+            <field name="position">department_head</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_manager"/>
+            <field name="department_id" ref="dept_sales"/>
+        </record>
+        
+        <record id="user_dept_head_marketing" model="users">
+            <field name="name">Enkh Marketing Head</field>
+            <field name="email">enkh.mkt@company.com</field>
+            <field name="role_id" ref="role_department_head"/>
+            <field name="position">department_head</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_manager"/>
+            <field name="department_id" ref="dept_marketing"/>
+        </record>
+        
+        <record id="user_dept_head_technology" model="users">
+            <field name="name">Enkh Technology Head</field>
+            <field name="email">enkh.tech@company.com</field>
+            <field name="role_id" ref="role_department_head"/>
+            <field name="position">department_head</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_manager"/>
+            <field name="department_id" ref="dept_technology"/>
+        </record>
+
+        <!-- Update Department Managers -->
+        <record id="dept_finance_manager" model="departments">
+            <field name="id" ref="dept_finance"/>
+            <field name="manager_id" ref="user_dept_head_finance"/>
+        </record>
+        
+        <record id="dept_hr_manager" model="departments">
+            <field name="id" ref="dept_hr"/>
+            <field name="manager_id" ref="user_dept_head_hr"/>
+        </record>
+        
+        <record id="dept_operations_manager" model="departments">
+            <field name="id" ref="dept_operations"/>
+            <field name="manager_id" ref="user_dept_head_operations"/>
+        </record>
+        
+        <record id="dept_sales_manager" model="departments">
+            <field name="id" ref="dept_sales"/>
+            <field name="manager_id" ref="user_dept_head_sales"/>
+        </record>
+        
+        <record id="dept_marketing_manager" model="departments">
+            <field name="id" ref="dept_marketing"/>
+            <field name="manager_id" ref="user_dept_head_marketing"/>
+        </record>
+        
+        <record id="dept_technology_manager" model="departments">
+            <field name="id" ref="dept_technology"/>
+            <field name="manager_id" ref="user_dept_head_technology"/>
+        </record>
+
+        <!-- Users - Team Leaders -->
+        <record id="user_leader_finance" model="users">
+            <field name="name">Oyu Finance Leader</field>
+            <field name="email">oyu.leader1@company.com</field>
+            <field name="role_id" ref="role_team_leader"/>
+            <field name="position">team_leader</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_dept_head_finance"/>
+            <field name="department_id" ref="dept_finance"/>
+        </record>
+        
+        <record id="user_leader_hr" model="users">
+            <field name="name">Sarnai HR Leader</field>
+            <field name="email">sarnai.leader2@company.com</field>
+            <field name="role_id" ref="role_team_leader"/>
+            <field name="position">team_leader</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_dept_head_hr"/>
+            <field name="department_id" ref="dept_hr"/>
+        </record>
+        
+        <record id="user_leader_operations" model="users">
+            <field name="name">Tuvshin Operations Leader</field>
+            <field name="email">tuvshin.leader3@company.com</field>
+            <field name="role_id" ref="role_team_leader"/>
+            <field name="position">team_leader</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_dept_head_operations"/>
+            <field name="department_id" ref="dept_operations"/>
+        </record>
+        
+        <record id="user_leader_sales" model="users">
+            <field name="name">Nara Sales Leader</field>
+            <field name="email">nara.leader4@company.com</field>
+            <field name="role_id" ref="role_team_leader"/>
+            <field name="position">team_leader</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_dept_head_sales"/>
+            <field name="department_id" ref="dept_sales"/>
+        </record>
+        
+        <record id="user_leader_marketing" model="users">
+            <field name="name">Bold Marketing Leader</field>
+            <field name="email">bold.leader5@company.com</field>
+            <field name="role_id" ref="role_team_leader"/>
+            <field name="position">team_leader</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_dept_head_marketing"/>
+            <field name="department_id" ref="dept_marketing"/>
+        </record>
+        
+        <record id="user_leader_technology" model="users">
+            <field name="name">Ganzorig Technology Leader</field>
+            <field name="email">ganzorig.leader6@company.com</field>
+            <field name="role_id" ref="role_team_leader"/>
+            <field name="position">team_leader</field>
+            <field name="status">active</field>
+            <field name="is_active" eval="True"/>
+            <field name="manager_id" ref="user_dept_head_technology"/>
+            <field name="department_id" ref="dept_technology"/>
+        </record>
+
+    </data>
+</odoo>

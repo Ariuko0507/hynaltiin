@@ -4,10 +4,10 @@ import { supabaseServer } from '@/lib/supabase-server';
 // PUT - Update a meeting (for manager reactions/approvals)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const meetingId = params.id;
+    const { id: meetingId } = await params;
     const body = await request.json();
     const { status, manager_reaction, manager_comment } = body;
 
@@ -39,10 +39,10 @@ export async function PUT(
 // DELETE - Delete a meeting
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const meetingId = params.id;
+    const { id: meetingId } = await params;
 
     const { error } = await supabaseServer
       .from('meetings')

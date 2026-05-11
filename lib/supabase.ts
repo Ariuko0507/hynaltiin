@@ -1,8 +1,8 @@
 // lib/supabase.ts
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = (process.env as any).NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = (process.env as any).NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-key'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
@@ -11,7 +11,7 @@ export interface User {
   id: number
   name: string
   email: string
-  role: 'admin' | 'director' | 'manager' | 'employee'
+  role: 'admin' | 'director' | 'manager' | 'department_head' | 'team_leader' | 'employee'
   department?: string
   created_at: string
   updated_at: string
@@ -49,8 +49,10 @@ export interface Meeting {
   title: string
   description?: string
   status: 'Төлөвлөсөн' | 'Баталгаажсан' | 'Цуцлагдсан'
-  organizer_id: number
+  organizer: number
   meeting_date: string
+  meeting_time?: string
+  participants?: string
   location?: string
   team_id?: number
   manager_reaction?: string
