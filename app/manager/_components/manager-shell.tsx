@@ -21,10 +21,11 @@ type ManagerShellProps = {
 };
 
 const sidebarLinks = [
-  { href: "/manager/dashboard", label: "Самбар", icon: "MG" },
+  { href: "/manager/dashboard", label: "Самбар", icon: "DS" },
   { href: "/manager/tasks", label: "Даалгавар", icon: "TK" },
   { href: "/manager/fulfillment", label: "Биелэлт", icon: "FL" },
   { href: "/manager/meeting", label: "Хурал", icon: "MT" },
+  { href: "/manager/department_meetings", label: "Хэлтсийн хурал", icon: "DM" },
 ];
 
 export function ManagerShell({

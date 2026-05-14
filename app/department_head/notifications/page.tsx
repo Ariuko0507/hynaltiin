@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { EmployeeShell } from "../_components/employee-shell";
+import { DepartmentHeadShell } from "../_components/department-head-shell";
 
 type NotificationItem = {
   id: string;
@@ -151,8 +151,8 @@ export default function EmployeeNotificationsPage() {
   };
 
   return (
-    <EmployeeShell
-      currentPath="/employee/notifications"
+    <DepartmentHeadShell
+      currentPath="/department_head/notifications"
       kicker="Notifications"
       title="Мэдэгдлүүд"
       description="Таны бүх мэдэгдэл, мэдээлэл энд харагдана."
@@ -248,6 +248,6 @@ export default function EmployeeNotificationsPage() {
           )}
         </div>
       </section>
-    </EmployeeShell>
+    </DepartmentHeadShell>
   );
 }

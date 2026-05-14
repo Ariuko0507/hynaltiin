@@ -6,13 +6,14 @@ type ShellStat = {
   value: string;
 };
 
-type EmployeeShellProps = {
+export type DepartmentHeadShellProps = {
   currentPath: string;
   kicker: string;
   title: string;
   description: string;
   children: ReactNode;
   stats?: ShellStat[];
+  notifications?: number;
   action?: ReactNode;
   noteTitle?: string;
   noteText?: string;
@@ -22,20 +23,26 @@ const sidebarLinks = [
   { href: "/department_head/dashboard", label: "Самбар", icon: "DS" },
   { href: "/department_head/tasks", label: "Даалгавар", icon: "TK" },
   { href: "/department_head/fulfillment", label: "Биелэлт", icon: "FL" },
-  { href: "/department_head/meeting", label: "Хурал", icon: "MT" },
+  { href: "/department_head/department_meetings", label: "Хэлтсийн хурал", icon: "DM" },
 ];
 
-export function EmployeeShell({
+const defaultNoteText =
+  "Өөрийн даалгаврын хугацаа болон багийн мэдээллийг тогтмол шинэчилж байгаарай.";
+
+export function DepartmentHeadShell({
   currentPath,
   kicker,
   title,
   description,
   children,
   stats = [],
+  notifications,
   action,
   noteTitle = "Анхаарах",
-  noteText = "Өөрийн даалгаврын хугацаа болон багийн мэдээллийг тогтмол шинэчилж байгаарай.",
-}: EmployeeShellProps) {
+  noteText = defaultNoteText,
+}: DepartmentHeadShellProps) {
+  void notifications;
+
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-950">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">

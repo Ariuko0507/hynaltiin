@@ -6,13 +6,14 @@ type ShellStat = {
   value: string;
 };
 
-type EmployeeShellProps = {
+export type LeaderShellProps = {
   currentPath: string;
   kicker: string;
   title: string;
   description: string;
   children: ReactNode;
   stats?: ShellStat[];
+  notifications?: number;
   action?: ReactNode;
   noteTitle?: string;
   noteText?: string;
@@ -22,20 +23,26 @@ const sidebarLinks = [
   { href: "/leader/dashboard", label: "Самбар", icon: "DS" },
   { href: "/leader/tasks", label: "Даалгавар", icon: "TK" },
   { href: "/leader/fulfillment", label: "Биелэлт", icon: "FL" },
-  { href: "/leader/meeting", label: "Хурал", icon: "MT" },
+  { href: "/leader/department_meetings", label: "Хэлтсийн хурал", icon: "DM" },
 ];
 
-export function EmployeeShell({
+const defaultNoteText =
+  "Ажилчдад даалгавар хуваарилж, биелэлтийг нэгтгэн хэлтэст илгээх.";
+
+export function LeaderShell({
   currentPath,
   kicker,
   title,
   description,
   children,
   stats = [],
+  notifications,
   action,
   noteTitle = "Анхаарах",
-  noteText = "Ажилчдад даалгавар хуваарилж, биелэлтийг нэгтгэн хэлтэст илгээх."
-}: EmployeeShellProps) {
+  noteText = defaultNoteText,
+}: LeaderShellProps) {
+  void notifications;
+
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-950">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { EmployeeShell } from "../_components/employee-shell";
+import { LeaderShell } from "../_components/leader-shell";
 
 type TaskStatus = "Хүлээгдэж байна" | "Ажиллаж байна" | "Хоцорсон" | "Дууссан" | "Яаралтай";
 type TaskFilter = "urgent" | "overdue" | "in_progress" | "all";
@@ -140,7 +140,7 @@ function TaskDetailCard({ task }: { task: TaskItem }) {
   );
 }
 
-export default function EmployeeTasksPage() {
+export default function LeaderTasksPage() {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState(incomingTasks[0].id);
   const [activeFilter, setActiveFilter] = useState<TaskFilter>("urgent");
@@ -171,13 +171,13 @@ export default function EmployeeTasksPage() {
 
   const handleNavigateToFulfillment = () => {
     if (selectedItem) {
-      router.push(`/employee/fulfillment?taskId=${selectedItem.id}&taskTitle=${encodeURIComponent(selectedItem.title)}`);
+      router.push(`/leader/fulfillment?taskId=${selectedItem.id}&taskTitle=${encodeURIComponent(selectedItem.title)}`);
     }
   };
 
   return (
-    <EmployeeShell
-      currentPath="/employee/tasks"
+    <LeaderShell
+      currentPath="/leader/tasks"
       kicker="Tasks"
       title="Ажилтанд оноосон даалгаврууд"
       description="Танд ирсэн ажлуудыг шүүж햞аад, хэн өгсөн, хэзээ дуусгах, хаана хэнд өгөх мэдээллийг нэг дороос харна."
@@ -318,6 +318,6 @@ export default function EmployeeTasksPage() {
           </div>
         </article>
       </section>
-    </EmployeeShell>
+    </LeaderShell>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { EmployeeShell } from "../_components/employee-shell";
+import { LeaderShell } from "../_components/leader-shell";
 
 type FulfillmentStatus = "Ноорог" | "Хадгалсан" | "Илгээсэн";
 
@@ -258,7 +258,7 @@ function FulfillmentDocumentPreview({
   );
 }
 
-export default function EmployeeFulfillmentPage() {
+export default function LeaderFulfillmentPage() {
   const searchParams = useSearchParams();
   const taskId = searchParams.get("taskId");
   const taskTitle = searchParams.get("taskTitle");
@@ -685,8 +685,8 @@ export default function EmployeeFulfillmentPage() {
   };
 
   return (
-    <EmployeeShell
-      currentPath="/employee/fulfillment"
+    <LeaderShell
+      currentPath="/leader/fulfillment"
       kicker="Fulfillment"
       title="Биелэлт илгээх, шинэчлэх хэсэг"
       description="Анхны маягт хоосон нээгдэнэ. Хадгалсны дараа хамгийн сүүлийн хувилбар харагдаж, хадгалсан түүхээс хэн хэзээ хадгалсныг сонгон илгээх боломжтой."
@@ -1125,6 +1125,6 @@ export default function EmployeeFulfillmentPage() {
           </div>
         </article>
       </section>
-    </EmployeeShell>
+    </LeaderShell>
   );
 }

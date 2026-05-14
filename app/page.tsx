@@ -27,6 +27,12 @@ export default function Home() {
               <Link href="/manager/meeting" className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white">
                 Manager Meeting
               </Link>
+              <Link href="/department_head/dashboard" className="rounded-full bg-amber-600 px-5 py-3 text-sm font-semibold text-white">
+                Department Head
+              </Link>
+              <Link href="/leader/dashboard" className="rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white">
+                Team Leader
+              </Link>
             </div>
           </div>
         </section>

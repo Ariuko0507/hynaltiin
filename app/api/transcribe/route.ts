@@ -39,66 +39,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { recordId, audioUrl } = await request.json();
+    const formData = await request.formData();
+    const audioFile = formData.get('audio') as File;
+    const meetingId = formData.get('meetingId') as string;
+    const userId = formData.get('userId') as string;
 
-    if (!recordId) {
+    if (!audioFile) {
       return NextResponse.json(
-        { error: 'recordId is required' },
+        { error: 'Audio file is required' },
         { status: 400 }
       );
     }
 
-    // Prefer downloading the audio via service-role Storage access to avoid public URL / RLS issues.
-    const { data: rec, error: recError } = await supabaseAdmin
+    // Create a temporary record in database for this transcription
+    const { data: record, error: insertError } = await supabaseAdmin
       .from('meeting_recordings')
-      .select('file_path, public_url')
-      .eq('id', recordId)
+      .insert({
+        meeting_id: meetingId,
+        user_id: userId ? parseInt(userId) : null,
+        file_path: `meeting-recordings/${meetingId}-${Date.now()}.wav`,
+        created_at: new Date().toISOString(),
+      })
+      .select()
       .single();
 
-    if (recError) {
+    if (insertError) {
       return NextResponse.json(
-        { error: `Failed to load recording metadata: ${recError.message}` },
+        { error: `Failed to create recording record: ${insertError.message}` },
         { status: 500 }
       );
     }
 
-    let audioBlob: Blob;
-    if (rec?.file_path) {
-      const { data: fileData, error: dlError } = await supabaseAdmin.storage
-        .from('meeting-recordings')
-        .download(rec.file_path);
-
-      if (dlError || !fileData) {
-        return NextResponse.json(
-          { error: `Failed to download audio from storage: ${dlError?.message ?? 'Unknown error'}` },
-          { status: 500 }
-        );
-      }
-
-      audioBlob = fileData;
-    } else {
-      // Fallback to audioUrl/public_url fetch if file_path is missing
-      const urlToFetch = audioUrl || rec?.public_url;
-      if (!urlToFetch) {
-        return NextResponse.json(
-          { error: 'No file_path or audioUrl available for download' },
-          { status: 500 }
-        );
-      }
-      const audioResponse = await fetch(urlToFetch);
-      if (!audioResponse.ok) {
-        return NextResponse.json(
-          { error: `Failed to download audio file (status ${audioResponse.status})` },
-          { status: 500 }
-        );
-      }
-      const audioBuffer = await audioResponse.arrayBuffer();
-      audioBlob = new Blob([audioBuffer], { type: 'audio/webm' });
-    }
-
-    // Convert to File for Groq API
-    const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
-
+    // Use the uploaded audio file directly
     console.log('Sending to Groq Whisper API...');
     let transcription: { text: string };
     try {
@@ -140,7 +112,7 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabaseAdmin
       .from('meeting_recordings')
       .update({ transcription: transcription.text })
-      .eq('id', recordId);
+      .eq('id', record.id);
 
     if (updateError) {
       console.error('Error updating transcription:', updateError);

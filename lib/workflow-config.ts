@@ -1,9 +1,9 @@
 export type WorkflowRole =
-  | "director_1"
-  | "director_2"
+  | "director1"
+  | "director2"
   | "manager"
   | "department_head"
-  | "leader";
+  | "team_leader";
 
 export type WorkflowRoleCard = {
   id: WorkflowRole;
@@ -28,137 +28,138 @@ export type MeetingTypeOption = {
 
 export const workflowRoles: WorkflowRoleCard[] = [
   {
-    id: "director_1",
+    id: "director1",
     label: "Director 1",
-    title: "Батлах, comment бичих, эцсийн хяналт",
+    title: "Final authority",
     accent: "bg-slate-950 text-white border-slate-800",
     responsibilities: [
-      "Даалгаврыг харж, засвар шаардлагатай бол буцааж засуулах.",
-      "Батлагдсан даалгаврыг биелэлт болгон авч, нэгтгэсэн үр дүнг шалгах.",
-      "Биелэлт дээр засвар хэрэгтэй үед дахин засварлуулж, дараагийн шат руу шилжүүлэх.",
+      "Sees all data, tasks, and fulfillments.",
+      "Provides final approval/rejection in upward flow.",
+      "Owns final executive oversight.",
     ],
   },
   {
-    id: "director_2",
+    id: "director2",
     label: "Director 2",
-    title: "Хоёр дахь шатны шалгалт, баталгаажуулалт",
+    title: "Second-level review",
     accent: "bg-violet-700/10 text-violet-950 border-violet-200",
     responsibilities: [
-      "Даалгаврыг шалгаж, алдаа байвал засуулахаар буцаах.",
-      "Биелэлтийг дахин шалгаж, шаардлагатай бол нэмэлт засвар нэхэх.",
-      "Director 1-ээр дамжсан урсгалын эцсийн чанарын шүүлт болох.",
+      "Reviews manager submissions.",
+      "Returns items for correction when needed.",
+      "Passes approved records to director1.",
     ],
   },
   {
     id: "manager",
     label: "Manager",
-    title: "Хурал, даалгавар, нэгтгэл, түгээлтийн төв цэг",
+    title: "Task and meeting control center",
     accent: "bg-emerald-700/10 text-emerald-950 border-emerald-200",
     responsibilities: [
-      "Хурлын үеэр voice бичиж, хурлын төрлөөр оролцогч сонгон хурал үүсгэх.",
-      "Өөрийн даалгаврыг Director 1, дараа нь Director 2-оор шат дараалан шалгуулж батлуулах.",
-      "Батлагдсан даалгаврыг хэлтсүүдэд хуваарилж, биелэлтийг нэгтгэн дахин захирлуудаар шалгуулах.",
+      "Distributes tasks to department heads.",
+      "Creates meetings and records official reactions.",
+      "Consolidates results and reports upward to director2.",
     ],
   },
   {
     id: "department_head",
     label: "Department Head",
-    title: "Хэлтсийн түвшний төлөвлөлт, хуваарилалт, нэгтгэл",
+    title: "Department-level owner",
     accent: "bg-sky-700/10 text-sky-950 border-sky-200",
     responsibilities: [
-      "Manager-тэй ижил логикоор өөрийн түвшний даалгаврыг шаталсан баталгаажуулалтаар явуулах.",
-      "Батлагдсан ажлыг leader болон доод ажилтнуудад хуваарилах.",
-      "Нэгтгэсэн биелэлтийг дахин дээрх түвшин рүү илгээж, засварын мөрийг хадгалах.",
+      "Assigns received tasks to team leader.",
+      "Manages correction/re-verification cycle.",
+      "Sends fulfillment upward to manager.",
     ],
   },
   {
-    id: "leader",
-    label: "Leader",
-    title: "Ажилчдад даалгавар өгөх, биелэлт цуглуулах, буцаан тайлагнах",
+    id: "team_leader",
+    label: "Team Leader",
+    title: "Execution and reporting",
     accent: "bg-amber-700/10 text-amber-950 border-amber-200",
     responsibilities: [
-      "Ажилчдад даалгавар хуваарилж, PDF болон хугацаатайгаар хүргэх.",
-      "Биелэлтийг авч нэгтгээд хэлтсийн даргад буцаан өгөх.",
-      "Хоцорсон, дутуу биелэлтийг тусад нь тэмдэглэж дээд шатанд харуулах.",
+      "Executes assigned tasks and submits review.",
+      "Handles corrected -> re_verified flow.",
+      "Sends completed work upward as fulfillment.",
     ],
   },
 ];
 
 export const approvalFlow = [
-  "Manager / Department Head даалгавар боловсруулна",
-  "Director 1 шалгаж comment эсвэл засвар буцаана",
-  "Director 2 дахин шалгаж баталгаажуулна",
-  "Батлагдсан даалгавар хэлтэс, баг, ажилтнуудад хуваарилагдана",
-  "Leader, Department Head биелэлтийг нэгтгэнэ",
-  "Director 1 → Director 2 дээр биелэлтийн эцсийн баталгаа хийгдэнэ",
+  "manager or department_head creates a task downward",
+  "assignee moves new -> in_progress -> review",
+  "reviewer may return corrected",
+  "assignee submits re_verified",
+  "task reaches completed after final check",
+  "completed task becomes fulfillment and moves upward",
 ];
 
 export const platformFeatures: PlatformFeature[] = [
   {
-    title: "PDF даалгавар ба биелэлт",
-    description: "Бүх түвшний хэрэглэгч үүрэг болон биелэлтийг PDF хэлбэрээр авч, дамжуулж, архивлана.",
-    emphasis: "file intake",
+    title: "Mandatory written response",
+    description: "Tasks that require response cannot be completed without written response/comment.",
+    emphasis: "written response",
   },
   {
-    title: "Хувийн цагийн хуваарь",
-    description: "Хэрэглэгч бүр өөрийн хуваарь, хурлын цаг, даалгаврын хугацааг тусдаа харна.",
-    emphasis: "schedule",
+    title: "PDF exports",
+    description: "Tasks and fulfillments can be exported as PDF and tracked by timestamp.",
+    emphasis: "pdf export",
   },
   {
-    title: "Үнэлгээ ба торгуулийн систем",
-    description: "Manager ямар баг ямар явцтай байгааг харж, хугацаа хэтэрсэн үед оноо бууруулах эсвэл торгууль тэмдэглэнэ.",
-    emphasis: "evaluation",
+    title: "Overdue automation",
+    description: "is_overdue is maintained automatically by trigger logic.",
+    emphasis: "automation",
   },
   {
-    title: "Хэлтэс дамнасан мэдэгдэл",
-    description: "Нэг хэлтэст даалгавар очиход бусад холбогдох хэлтсүүдэд давхар мэдэгдэл очно.",
-    emphasis: "notification",
+    title: "Notification-first workflow",
+    description: "Task, fulfillment, and meeting events emit targeted notifications.",
+    emphasis: "notifications",
   },
   {
-    title: "Хурлын төрөл ба оролцогч сонголт",
-    description: "Manager хурал зарлахдаа төрлөө сонгож, нийтээр эсвэл сонгомол оролцогчтой хурлыг үүсгэнэ.",
-    emphasis: "meeting types",
-  },
-  {
-    title: "Хоцорсон биелэлтийн диаграм",
-    description: "Хугацаа хэтэрсэн биелэлт manager дээр 'өгөөгүй' гэж хадгалагдаж, диаграм дээр тусдаа харагдана.",
-    emphasis: "late tracking",
+    title: "Full audit trail",
+    description: "Every major action is captured in audit logs with timestamp metadata.",
+    emphasis: "audit",
   },
 ];
 
 export const meetingTypeOptions: MeetingTypeOption[] = [
   {
-    id: "all_hands",
-    label: "Нийт хурал",
+    id: "regular",
+    label: "Regular Meeting",
     audienceMode: "all",
-    description: "Бүх хэлтэс, бүх түвшний оролцогчидтой байгууллагын хэмжээний хурал.",
+    description: "Standard recurring meeting.",
   },
   {
-    id: "management_review",
-    label: "Удирдлагын хурал",
+    id: "urgent",
+    label: "Urgent Meeting",
     audienceMode: "selected",
-    description: "Director, manager, department head түвшний сонгомол оролцогчтой хурал.",
+    description: "Fast-track meeting for urgent issues.",
   },
   {
-    id: "department_sync",
-    label: "Хэлтсийн хурал",
+    id: "reporting",
+    label: "Reporting Meeting",
     audienceMode: "hybrid",
-    description: "Нэг эсвэл хэд хэдэн хэлтсийн дотоод уялдаа, тайлангийн хурал.",
+    description: "Review and reporting meeting.",
   },
   {
-    id: "urgent_issue",
-    label: "Яаралтай хурал",
+    id: "planning",
+    label: "Planning Meeting",
+    audienceMode: "hybrid",
+    description: "Planning and roadmap meeting.",
+  },
+  {
+    id: "evaluation",
+    label: "Evaluation Meeting",
     audienceMode: "selected",
-    description: "Тусгай асуудал, хоцрогдол, эрсдэлийн үед хурдан бүрдүүлэх хурал.",
+    description: "Performance and KPI review meeting.",
   },
 ];
 
 export const audienceGroups = [
-  "Бүх хэлтэс",
-  "Санхүү",
-  "Хүний нөөц",
-  "Үйл ажиллагаа",
-  "Борлуулалт",
-  "Маркетинг",
-  "Технологи",
+  "All Departments",
+  "Management Department",
+  "Finance Department",
+  "Human Resources Department",
+  "Marketing Department",
+  "Technology Department",
+  "Operations Department",
 ];

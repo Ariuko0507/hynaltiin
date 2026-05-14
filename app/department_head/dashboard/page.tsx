@@ -25,10 +25,10 @@ type TeamAssignment = {
 };
 
 const sidebarLinks = [
-  { href: "/employee/dashboard", label: "Самбар", icon: "DS" },
-  { href: "/employee/tasks", label: "Даалгавар", icon: "TK" },
-  { href: "/employee/fulfillment", label: "Биелэлт", icon: "FL" },
-  { href: "/employee/meeting", label: "Хурал", icon: "MT" },
+  { href: "/department_head/dashboard", label: "Самбар", icon: "DS" },
+  { href: "/department_head/tasks", label: "Даалгавар", icon: "TK" },
+  { href: "/department_head/fulfillment", label: "Биелэлт", icon: "FL" },
+  { href: "/department_head/department_meetings", label: "Хэлтсийн Хурал", icon: "DM" },
 ];
 
 const personalAssignments: PersonalAssignment[] = [
@@ -137,7 +137,7 @@ export default function EmployeeDashboardPage() {
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
         <aside className="hidden w-72 shrink-0 border-r border-slate-200/80 bg-white/80 px-6 py-8 backdrop-blur lg:block">
           <div className="rounded-[28px] bg-slate-950 px-5 py-6 text-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-300">Employee</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-300">Хэлтсийн дарга</p>
             <h2 className="mt-3 text-2xl font-semibold">Ажилтны самбар</h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
               Өөрийн мэдээлэл, хийх ажил, багийн явцыг нэг дороос харна.
@@ -150,7 +150,7 @@ export default function EmployeeDashboardPage() {
                 key={link.href}
                 href={link.href}
                 className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                  link.href === "/employee/dashboard"
+                  link.href === "/department_head/dashboard"
                     ? "bg-slate-950 text-white shadow-lg"
                     : "text-slate-600 hover:bg-white hover:text-slate-950"
                 }`}
@@ -258,7 +258,7 @@ export default function EmployeeDashboardPage() {
                       <h2 className="mt-2 text-2xl font-semibold text-slate-950">2 яаралтай ажил</h2>
                     </div>
                     <Link
-                      href="/employee/tasks"
+                      href="/department_head/tasks"
                       className="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
                     >
                       Бүгдийг харах

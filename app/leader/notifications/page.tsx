@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { EmployeeShell } from "../_components/employee-shell";
+import { LeaderShell } from "../_components/leader-shell";
 
 type NotificationItem = {
   id: string;
@@ -31,7 +31,7 @@ function getTypeIcon(type: NotificationItem["type"]) {
 // Employee user ID (in real app, get from auth context)
 const CURRENT_USER_ID = 4; // Ажилтан Сарнай's ID
 
-export default function EmployeeNotificationsPage() {
+export default function LeaderNotificationsPage() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -151,8 +151,8 @@ export default function EmployeeNotificationsPage() {
   };
 
   return (
-    <EmployeeShell
-      currentPath="/employee/notifications"
+    <LeaderShell
+      currentPath="/leader/notifications"
       kicker="Notifications"
       title="Мэдэгдлүүд"
       description="Таны бүх мэдэгдэл, мэдээлэл энд харагдана."
@@ -248,6 +248,6 @@ export default function EmployeeNotificationsPage() {
           )}
         </div>
       </section>
-    </EmployeeShell>
+    </LeaderShell>
   );
 }

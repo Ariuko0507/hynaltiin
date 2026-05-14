@@ -5,6 +5,35 @@ import { DirectorShell } from "../_components/director-shell";
 import { supabase, Meeting } from "@/lib/supabase";
 import { getUnreadNotificationCount } from "@/app/_lib/notifications";
 
+const MEETING_STATUS_LABEL: Record<Meeting["status"], string> = {
+  scheduled: "Төлөвлөсөн",
+  completed: "Дууссан",
+  cancelled: "Цуцлагдсан",
+};
+
+function meetingStatusBadgeClass(status: Meeting["status"]) {
+  if (status === "scheduled") return "bg-emerald-100 text-emerald-700";
+  if (status === "completed") return "bg-amber-100 text-amber-700";
+  return "bg-red-100 text-red-700";
+}
+
+function formatMeetingDateTime(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    return { dateStr: iso, timeStr: null as string | null };
+  }
+  return {
+    dateStr: d.toLocaleDateString("mn-MN"),
+    timeStr: d.toLocaleTimeString("mn-MN", { hour: "2-digit", minute: "2-digit" }),
+  };
+}
+
+function participantsFromDescription(desc: string | null | undefined) {
+  if (!desc) return null;
+  const line = desc.split(/\n/).find((l) => l.startsWith("Оролцогчид:"));
+  return line ? line.replace(/^Оролцогчид:\s*/, "").trim() : null;
+}
+
 const directorData = {
   name: "Директор Энх",
   email: "director@example.com",
@@ -70,17 +99,15 @@ export default function DirectorDashboardPage() {
         const sampleMeetings: Meeting[] = [
           {
             id: 1,
-            meeting_id: 'meeting_001',
-            title: 'Стратегийн хурал',
-            description: 'Компанийн улирлын стратеги төлөвлөгөө',
-            status: 'Эхэлсэн',
-            organizer: 1,
-            meeting_date: '2026-04-28',
-            meeting_time: '10:00',
-            participants: 'Директор, Менежерүүд',
-            created_at: '2026-04-27T10:00:00Z',
-            updated_at: '2026-04-27T10:00:00Z'
-          }
+            meeting_code: "MTG-SAMPLE-001",
+            title: "Стратегийн хурал",
+            description: "Компанийн улирлын стратеги төлөвлөгөө\n\nОролцогчид: Директор, Менежерүүд",
+            status: "scheduled",
+            organizer_id: 1,
+            meeting_date: "2026-04-28T10:00:00",
+            created_at: "2026-04-27T10:00:00Z",
+            updated_at: "2026-04-27T10:00:00Z",
+          },
         ];
         setMeetings(sampleMeetings);
         return;
@@ -113,36 +140,36 @@ export default function DirectorDashboardPage() {
     
     try {
       console.log('Хурал хадгалах оролдлого...', meetingData);
-      
+
+      const descriptionLines = [
+        meetingData.description.trim(),
+        meetingData.participants.trim() ? `Оролцогчид: ${meetingData.participants.trim()}` : "",
+      ].filter(Boolean);
+      const combinedDescription = descriptionLines.length ? descriptionLines.join("\n\n") : null;
+
       // Database-д хурал хадгалах
-      const { data, error } = await supabase
-        .from('meetings')
-        .insert({
-          meeting_id: `meeting_${Date.now()}`,
-          title: meetingData.title,
-          description: meetingData.description,
-          meeting_date: meetingData.date,
-          meeting_time: meetingData.time,
-          participants: meetingData.participants,
-          status: 'Эхэлсэн',
-          organizer: 1 // Director ID
-        });
+      const { data, error } = await supabase.from("meetings").insert({
+        meeting_code: `MTG-${Date.now()}`,
+        title: meetingData.title,
+        description: combinedDescription,
+        meeting_date: `${meetingData.date}T${meetingData.time}:00`,
+        status: "scheduled",
+        organizer_id: userId,
+      });
 
       if (error) {
         console.error('Хурал хадгалахад алдаа гарлаа:', error);
         // Хэрэв database алдаа гарвал local state дээр нэмэх
         const newMeeting: Meeting = {
           id: Date.now(),
-          meeting_id: `meeting_${Date.now()}`,
+          meeting_code: `MTG-${Date.now()}`,
           title: meetingData.title,
-          description: meetingData.description,
-          status: 'Эхэлсэн',
-          organizer: 1,
-          meeting_date: meetingData.date,
-          meeting_time: meetingData.time,
-          participants: meetingData.participants,
+          description: combinedDescription,
+          status: "scheduled",
+          organizer_id: userId,
+          meeting_date: `${meetingData.date}T${meetingData.time}:00`,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         };
         
         setMeetings(prevMeetings => [newMeeting, ...prevMeetings]);
@@ -554,59 +581,63 @@ export default function DirectorDashboardPage() {
                   <p className="text-xs text-slate-500 mt-1">Шинэ хурал товлоорой</p>
                 </div>
               ) : (
-                meetings.map((meeting) => (
+                meetings.map((meeting) => {
+                  const { dateStr, timeStr } = formatMeetingDateTime(meeting.meeting_date);
+                  const participants = participantsFromDescription(meeting.description);
+                  const descriptionBody =
+                    meeting.description
+                      ?.split(/\n/)
+                      .filter((l) => !l.startsWith("Оролцогчид:"))
+                      .join("\n")
+                      .trim() || "";
+                  return (
                   <div key={meeting.id} className="rounded-2xl bg-slate-50 p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <h3 className="font-semibold text-slate-900">{meeting.title}</h3>
-                          <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                            meeting.status === 'Эхэлсэн' 
-                              ? 'bg-emerald-100 text-emerald-700' 
-                              : meeting.status === 'Зассан'
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}>
-                            {meeting.status}
+                          <span className={`rounded-full px-2 py-1 text-xs font-medium ${meetingStatusBadgeClass(meeting.status)}`}>
+                            {MEETING_STATUS_LABEL[meeting.status]}
                           </span>
                         </div>
                         
-                        {meeting.description && (
-                          <p className="text-sm text-slate-600 mb-2">{meeting.description}</p>
-                        )}
+                        {descriptionBody ? (
+                          <p className="text-sm text-slate-600 mb-2">{descriptionBody}</p>
+                        ) : null}
                         
                         <div className="flex items-center gap-4 text-xs text-slate-500">
-                          {meeting.meeting_date && (
+                          {dateStr ? (
                             <div className="flex items-center gap-1">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
-                              {meeting.meeting_date}
+                              {dateStr}
                             </div>
-                          )}
+                          ) : null}
                           
-                          {meeting.meeting_time && (
+                          {timeStr ? (
                             <div className="flex items-center gap-1">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
-                              {meeting.meeting_time}
+                              {timeStr}
                             </div>
-                          )}
+                          ) : null}
                         </div>
                         
-                        {meeting.participants && (
+                        {participants ? (
                           <div className="mt-2 flex items-center gap-1 text-xs text-slate-500">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
-                            {meeting.participants}
+                            {participants}
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </article>

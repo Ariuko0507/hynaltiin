@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { EmployeeShell } from "../_components/employee-shell";
+import { DepartmentHeadShell } from "../_components/department-head-shell";
 
 type FulfillmentStatus = "Ноорог" | "Хадгалсан" | "Илгээсэн";
 
@@ -685,8 +685,8 @@ export default function EmployeeFulfillmentPage() {
   };
 
   return (
-    <EmployeeShell
-      currentPath="/employee/fulfillment"
+    <DepartmentHeadShell
+      currentPath="/department_head/fulfillment"
       kicker="Fulfillment"
       title="Биелэлт илгээх, шинэчлэх хэсэг"
       description="Анхны маягт хоосон нээгдэнэ. Хадгалсны дараа хамгийн сүүлийн хувилбар харагдаж, хадгалсан түүхээс хэн хэзээ хадгалсныг сонгон илгээх боломжтой."
@@ -1125,6 +1125,6 @@ export default function EmployeeFulfillmentPage() {
           </div>
         </article>
       </section>
-    </EmployeeShell>
+    </DepartmentHeadShell>
   );
 }

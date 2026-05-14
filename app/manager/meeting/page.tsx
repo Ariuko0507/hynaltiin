@@ -18,7 +18,7 @@ type MeetingItem = {
   organizer_id: number;
   date: string;
   location: string;
-  description?: string;
+  description?: string | null;
   manager_reaction?: string;
   manager_comment?: string;
   team_id?: number;
@@ -38,6 +38,23 @@ type MeetingApiItem = {
   manager_comment?: string | null;
   team_id?: number | null;
 };
+
+function mapApiMeetingToItem(m: MeetingApiItem): MeetingItem {
+  return {
+    id: m.id,
+    meeting_id: m.meeting_id,
+    title: m.title,
+    status: m.status,
+    organizer: m.organizer?.name || "Unknown",
+    organizer_id: m.organizer_id,
+    date: new Date(m.meeting_date).toLocaleString("mn-MN"),
+    location: m.location ?? "",
+    description: m.description ?? undefined,
+    manager_reaction: m.manager_reaction ?? undefined,
+    manager_comment: m.manager_comment ?? undefined,
+    team_id: m.team_id ?? undefined,
+  };
+}
 
 function getStatusClasses(status: MeetingStatus) {
   if (status === "Баталгаажсан") return "bg-emerald-100 text-emerald-700";
@@ -214,20 +231,7 @@ export default function ManagerMeetingPage() {
       const response = await fetch(`/api/meetings?userId=${userId}&userRole=manager`);
       const data = await response.json();
       if (data.meetings) {
-        const formattedMeetings = (data.meetings as MeetingApiItem[]).map((m) => ({
-          id: m.id,
-          meeting_id: m.meeting_id,
-          title: m.title,
-          status: m.status,
-          organizer: m.organizer?.name || 'Unknown',
-          organizer_id: m.organizer_id,
-          date: new Date(m.meeting_date).toLocaleString('mn-MN'),
-          location: m.location || '',
-          description: m.description,
-          manager_reaction: m.manager_reaction,
-          manager_comment: m.manager_comment,
-          team_id: m.team_id,
-        }));
+        const formattedMeetings = (data.meetings as MeetingApiItem[]).map(mapApiMeetingToItem);
         setItems(formattedMeetings);
       }
     } catch (error) {

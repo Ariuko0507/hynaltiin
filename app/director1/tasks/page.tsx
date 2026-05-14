@@ -6,6 +6,25 @@ import { supabase, Task } from "@/lib/supabase";
 import { getUnreadNotificationCount, createNotification } from "@/app/_lib/notifications";
 
 type TaskStatus = "Эхэлсэн" | "Зассан" | "Эсхийг" | "Дууссан";
+
+function taskDbStatusToMn(status: Task["status"]): TaskStatus {
+  switch (status) {
+    case "completed":
+    case "cancelled":
+      return "Дууссан";
+    case "new":
+      return "Эсхийг";
+    case "corrected":
+    case "re_verified":
+      return "Зассан";
+    default:
+      return "Эхэлсэн";
+  }
+}
+
+function isTaskActiveStatus(s: Task["status"]) {
+  return s === "in_progress" || s === "review" || s === "corrected" || s === "re_verified";
+}
 type TaskFilter = "all" | "in_progress" | "pending" | "completed";
 
 type TaskItem = {
@@ -216,7 +235,6 @@ export default function DirectorTasksPage() {
       console.log('Task data after validation:', taskData);
       
       const insertData = {
-        task_id: `task_${Date.now()}`,
         task_code: `T-${Date.now().toString().slice(-6)}`,
         title: taskData.title,
         description: taskData.description,
@@ -274,11 +292,9 @@ export default function DirectorTasksPage() {
   const filteredTasks = useMemo(() => {
     // Database-ээс авсан tasks-ийг display хийх
     const displayTasks = tasks.map((task: Task) => ({
-      id: task.task_id,
+      id: task.task_code,
       title: task.title,
-      status: (task.status === 'Эхэлсэн' ? 'Эхэлсэн' : 
-              task.status === 'Зассан' ? 'Зассан' : 
-              task.status === 'Эсхийг' ? 'Эсхийг' : 'Дууссан') as TaskStatus,
+      status: taskDbStatusToMn(task.status),
       due: task.due_date || 'Тодорхойгүй',
       owner: 'Директор Энх',
       assignedBy: String(task.assigned_to) || 'Тодорхойгүй',
@@ -307,8 +323,8 @@ export default function DirectorTasksPage() {
       description="Стратегийн чухал даалгавруудыг хянаж, статусыг шинэчилж, багийн ажилтнуудад удирдамж өгнө."
       stats={[
         { label: "Нийт даалгавар", value: String(tasks.length) },
-        { label: "Идэвхтэй", value: String(tasks.filter(t => t.status === 'Эхэлсэн' || t.status === 'Зассан').length) },
-        { label: "Хүлээгдэж буй", value: String(tasks.filter(t => t.status === 'Эсхийг').length) },
+        { label: "Идэвхтэй", value: String(tasks.filter((t) => isTaskActiveStatus(t.status)).length) },
+        { label: "Хүлээгдэж буй", value: String(tasks.filter((t) => t.status === "new").length) },
       ]}
       notifications={notificationCount}
       userId={userId}

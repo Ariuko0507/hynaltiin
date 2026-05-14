@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { isNotificationType } from "@/lib/workflow-rules";
+import { createAuditLog, getRequestIp } from "@/lib/server-workflow";
 
 // GET /api/notifications?user_id=123 - Get notifications for a user
 export async function GET(request: NextRequest) {
@@ -48,11 +50,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { user_id, title, message, type = "info", link } = body;
+    const { user_id, title, message, type = "info", link, actor_id } = body;
 
     if (!user_id || !title || !message) {
       return NextResponse.json(
         { error: "user_id, title, and message are required" },
+        { status: 400 }
+      );
+    }
+    if (!isNotificationType(type)) {
+      return NextResponse.json(
+        { error: "Invalid type. Allowed: info, warning, alert, success, comment, meeting, task, fulfillment" },
         { status: 400 }
       );
     }
@@ -78,6 +86,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    await createAuditLog({
+      userId: actor_id ?? null,
+      action: "notification_created",
+      objectType: "notification",
+      objectId: data.id,
+      details: { target_user_id: Number(user_id), type },
+      ipAddress: getRequestIp(request),
+    });
+
     return NextResponse.json({ notification: data }, { status: 201 });
   } catch (err) {
     console.error("Unexpected error:", err);
@@ -94,7 +111,7 @@ export async function PUT(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const body = await request.json();
-    const { is_read } = body;
+    const { is_read, actor_id } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -118,6 +135,15 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    await createAuditLog({
+      userId: actor_id ?? null,
+      action: "notification_updated",
+      objectType: "notification",
+      objectId: Number(id),
+      details: { is_read },
+      ipAddress: getRequestIp(request),
+    });
+
     return NextResponse.json({ notification: data }, { status: 200 });
   } catch (err) {
     console.error("Unexpected error:", err);
@@ -133,6 +159,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const actorId = Number(searchParams.get("actor_id"));
 
     if (!id) {
       return NextResponse.json(
@@ -153,6 +180,14 @@ export async function DELETE(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    await createAuditLog({
+      userId: Number.isFinite(actorId) ? actorId : null,
+      action: "notification_deleted",
+      objectType: "notification",
+      objectId: Number(id),
+      ipAddress: getRequestIp(request),
+    });
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
