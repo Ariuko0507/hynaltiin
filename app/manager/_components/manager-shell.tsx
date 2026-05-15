@@ -18,6 +18,7 @@ type ManagerShellProps = {
   noteText?: string;
   notifications?: number;
   userId?: number;
+  fullWidth?: boolean;
 };
 
 const sidebarLinks = [
@@ -40,10 +41,11 @@ export function ManagerShell({
   noteText = "Багийн гүйцэтгэл, төслийн явц, хурлын тоймыг тогтмол хянаж байгаарай.",
   notifications = 0,
   userId,
+  fullWidth = false,
 }: ManagerShellProps) {
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-950">
-      <div className="mx-auto flex min-h-screen max-w-[1600px]">
+      <div className={`mx-auto flex min-h-screen ${fullWidth ? "max-w-none w-full" : "max-w-[1600px]"}`}>
         <aside className="hidden w-72 shrink-0 border-r border-slate-200/80 bg-white/80 px-6 py-8 backdrop-blur lg:block">
           <div className="rounded-[28px] bg-slate-950 px-5 py-6 text-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
             <div className="flex items-start justify-between">
@@ -92,8 +94,8 @@ export function ManagerShell({
           </div>
         </aside>
 
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
-          <div className="mx-auto max-w-7xl space-y-6">
+        <main className={`flex-1 py-6 sm:py-7 lg:py-8 ${fullWidth ? "px-4 sm:px-6 lg:px-8 xl:px-10" : "px-4 sm:px-6 lg:px-10"}`}>
+          <div className={`mx-auto space-y-6 ${fullWidth ? "max-w-none" : "max-w-7xl"}`}>
             <section className="overflow-hidden rounded-[32px] bg-slate-950 text-white shadow-[0_30px_80px_rgba(15,23,42,0.30)]">
               <div className="grid gap-6 px-6 py-8 sm:px-8 lg:grid-cols-[1.25fr_0.75fr] lg:px-10">
                 <div>

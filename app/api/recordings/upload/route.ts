@@ -15,7 +15,15 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: Request) {
   try {
-    const { meetingId, userId, filePath, publicUrl, fileSize, duration } = await request.json();
+    const body = await request.json();
+    console.log('API received:', body);
+
+    const { meetingId, userId, filePath, publicUrl, fileSize, duration } = body;
+
+    if (!meetingId) {
+      console.error('meetingId is null/undefined:', body);
+      return NextResponse.json({ error: "meetingId is required" }, { status: 400 });
+    }
 
     const { data, error } = await supabaseAdmin
       .from("meeting_recordings")

@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
       .select(
         `
         *,
-        meeting_type:meeting_types(id, name, description),
         organizer:users(id, name, position)
       `,
       )
@@ -91,16 +90,9 @@ export async function POST(request: NextRequest) {
       };
     };
 
-    if (!title?.trim() || !meeting_date || !organizer_id || !meeting_type_id) {
+    if (!title?.trim() || !meeting_date || !organizer_id) {
       return NextResponse.json(
-        { error: "title, meeting_date, organizer_id, and meeting_type_id are required" },
-        { status: 400 },
-      );
-    }
-
-    if (!recording?.file_path?.trim()) {
-      return NextResponse.json(
-        { error: "A meeting recording is mandatory. Provide recording.file_path." },
+        { error: "title, meeting_date, and organizer_id are required" },
         { status: 400 },
       );
     }
@@ -113,13 +105,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only manager can create meetings" }, { status: 403 });
     }
 
-    const { data: typeRow, error: typeError } = await supabaseServer
-      .from("meeting_types")
-      .select("id")
-      .eq("id", meeting_type_id)
-      .single();
-    if (typeError || !typeRow) {
-      return NextResponse.json({ error: "Invalid meeting_type_id" }, { status: 400 });
+    // Get default meeting type if not provided
+    let meetingTypeId = meeting_type_id;
+    if (!meetingTypeId) {
+      const { data: defaultType } = await supabaseServer
+        .from("meeting_types")
+        .select("id")
+        .eq("name", "Regular Meeting")
+        .single();
+      meetingTypeId = defaultType?.id;
     }
 
     const meetingCode = makeCode("MTG");
@@ -127,7 +121,7 @@ export async function POST(request: NextRequest) {
       .from("meetings")
       .insert({
         meeting_code: meetingCode,
-        meeting_type_id,
+        meeting_type_id: meetingTypeId,
         title: title.trim(),
         description: description ?? null,
         agenda: agenda ?? null,
@@ -156,16 +150,19 @@ export async function POST(request: NextRequest) {
       await supabaseServer.from("meeting_attendees").insert(attendeePayload);
     }
 
-    await supabaseServer.from("meeting_recordings").insert({
-      meeting_id: meeting.id,
-      user_id: organizer_id,
-      file_path: recording.file_path.trim(),
-      public_url: recording.public_url ?? null,
-      file_size: recording.file_size ?? null,
-      duration_seconds: recording.duration_seconds ?? null,
-      recording_type: recording.recording_type ?? "video",
-      transcription: recording.transcription ?? null,
-    });
+    // Only insert recording if provided
+    if (recording && recording.file_path && recording.file_path.trim()) {
+      await supabaseServer.from("meeting_recordings").insert({
+        meeting_id: meeting.id,
+        user_id: organizer_id,
+        file_path: recording.file_path.trim(),
+        public_url: recording.public_url ?? null,
+        file_size: recording.file_size ?? null,
+        duration_seconds: recording.duration_seconds ?? null,
+        recording_type: recording.recording_type ?? "video",
+        transcription: recording.transcription ?? null,
+      });
+    }
 
     for (const attendeeId of attendeeIds) {
       await createNotificationRow({

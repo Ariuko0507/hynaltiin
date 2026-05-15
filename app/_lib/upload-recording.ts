@@ -18,6 +18,8 @@ export async function uploadMeetingRecording(
   duration: number = 0
 ): Promise<UploadMeetingRecordingResponse> {
   try {
+    console.log('uploadMeetingRecording called with:', { meetingId, userId, duration, meetingIdType: typeof meetingId });
+
     // Generate unique filename
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `meeting_${meetingId}_${timestamp}.webm`;
@@ -41,17 +43,20 @@ export async function uploadMeetingRecording(
       .getPublicUrl(filePath);
 
     // Save metadata to database via API route (bypasses RLS)
+    const payload = {
+      meetingId,
+      userId,
+      filePath,
+      publicUrl,
+      fileSize: audioBlob.size,
+      duration,
+    };
+    console.log('Sending to API:', payload);
+
     const response = await fetch('/api/recordings/upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        meetingId,
-        userId,
-        filePath,
-        publicUrl,
-        fileSize: audioBlob.size,
-        duration,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -113,12 +118,24 @@ export async function deleteMeetingRecording(filePath: string, recordId: number)
   }
 }
 
-export async function transcribeRecording(recordId: number, audioUrl: string) {
+export async function transcribeRecording(recordId: number, audioUrl: string, meetingId: string, userId: number) {
   try {
+    // Fetch the audio file from the public URL
+    const audioResponse = await fetch(audioUrl);
+    if (!audioResponse.ok) {
+      throw new Error('Failed to fetch audio file');
+    }
+    const audioBlob = await audioResponse.blob();
+    const audioFile = new File([audioBlob], 'audio.webm', { type: 'audio/webm' });
+
+    const formData = new FormData();
+    formData.append('audio', audioFile);
+    formData.append('meetingId', meetingId);
+    formData.append('userId', String(userId));
+
     const response = await fetch('/api/transcribe', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recordId, audioUrl }),
+      body: formData,
     });
 
     if (!response.ok) {
@@ -142,5 +159,25 @@ export async function transcribeRecording(recordId: number, audioUrl: string) {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown transcription error',
     };
+  }
+}
+
+export async function updateRecordingTranscription(recordId: number, transcription: string) {
+  try {
+    const response = await fetch('/api/recordings/update-transcript', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recordId, transcription }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload?.error || 'Failed to update transcription');
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Update transcription error:', error);
+    return { success: false };
   }
 }

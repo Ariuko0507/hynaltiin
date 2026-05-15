@@ -26,6 +26,76 @@ const highlights = [
   "8 шинэ даалгавар хүлээгдэж байна.",
 ];
 
+type Employee = {
+  id: string;
+  name: string;
+  role: string;
+  tasksCompleted: number;
+  tasksInProgress: number;
+  tasksPending: number;
+  totalTasks: number;
+  completionRate: number;
+  avatar: string;
+};
+
+const employees: Employee[] = [
+  {
+    id: "E-001",
+    name: "Бат",
+    role: "Ажилтан",
+    tasksCompleted: 12,
+    tasksInProgress: 3,
+    tasksPending: 1,
+    totalTasks: 16,
+    completionRate: 75,
+    avatar: "БТ",
+  },
+  {
+    id: "E-002",
+    name: "Сарнай",
+    role: "Ажилтан",
+    tasksCompleted: 15,
+    tasksInProgress: 2,
+    tasksPending: 0,
+    totalTasks: 17,
+    completionRate: 88,
+    avatar: "СН",
+  },
+  {
+    id: "E-003",
+    name: "Дорж",
+    role: "Ажилтан",
+    tasksCompleted: 10,
+    tasksInProgress: 4,
+    tasksPending: 2,
+    totalTasks: 16,
+    completionRate: 63,
+    avatar: "ДЖ",
+  },
+  {
+    id: "E-004",
+    name: "Номин",
+    role: "Ажилтан",
+    tasksCompleted: 14,
+    tasksInProgress: 3,
+    tasksPending: 1,
+    totalTasks: 18,
+    completionRate: 78,
+    avatar: "НМ",
+  },
+  {
+    id: "E-005",
+    name: "Тэмүүжин",
+    role: "Менежер",
+    tasksCompleted: 8,
+    tasksInProgress: 5,
+    tasksPending: 2,
+    totalTasks: 15,
+    completionRate: 53,
+    avatar: "ТЖ",
+  },
+];
+
 const initialTasks = [
   "Багийн гишүүдэд даалгавар тараах.",
   "Төслийн явцын тайланг шалгах.",
@@ -187,6 +257,69 @@ export default function ManagerDashboardPage() {
               <div className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-sm text-slate-500">Хэлтэс</p>
                 <p className="mt-2 text-base font-medium text-slate-950">{managerData.department}</p>
+              </div>
+            </div>
+          </article>
+
+          <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Багийн гүйцэтгэл</p>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">Хамгийн идэвхтэй ажилтан</h2>
+              </div>
+              <span className="text-2xl">🏆</span>
+            </div>
+
+            <div className="space-y-3">
+              {employees
+                .sort((a, b) => b.completionRate - a.completionRate)
+                .slice(0, 3)
+                .map((emp, index) => (
+                <div key={emp.id} className="flex items-center gap-4 p-3 rounded-2xl bg-slate-50">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    index === 0 ? "bg-amber-100 text-amber-700" :
+                    index === 1 ? "bg-slate-200 text-slate-700" :
+                    index === 2 ? "bg-orange-100 text-orange-700" :
+                    "bg-slate-100 text-slate-600"
+                  }`}>
+                    {index + 1}
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-700">
+                    {emp.avatar}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-slate-950">{emp.name}</p>
+                    <p className="text-xs text-slate-500">{emp.tasksCompleted} даалгавар биелүүлсэн</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-slate-950">{emp.completionRate}%</p>
+                    <p className="text-xs text-slate-400">биелэлт</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-200">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400 mb-3">Багийн нийт статистик</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-emerald-50 p-3 text-center">
+                  <p className="text-xl font-bold text-emerald-700">
+                    {employees.reduce((acc, e) => acc + e.tasksCompleted, 0)}
+                  </p>
+                  <p className="text-xs text-emerald-600">Дууссан</p>
+                </div>
+                <div className="rounded-2xl bg-blue-50 p-3 text-center">
+                  <p className="text-xl font-bold text-blue-700">
+                    {employees.reduce((acc, e) => acc + e.tasksInProgress, 0)}
+                  </p>
+                  <p className="text-xs text-blue-600">Хийж буй</p>
+                </div>
+                <div className="rounded-2xl bg-amber-50 p-3 text-center">
+                  <p className="text-xl font-bold text-amber-700">
+                    {employees.reduce((acc, e) => acc + e.tasksPending, 0)}
+                  </p>
+                  <p className="text-xs text-amber-600">Хүлээгдэж буй</p>
+                </div>
               </div>
             </div>
           </article>

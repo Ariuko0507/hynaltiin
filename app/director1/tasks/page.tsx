@@ -37,6 +37,15 @@ type TaskItem = {
   description: string;
 };
 
+type NotificationApiItem = {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  link?: string | null;
+  created_at?: string | null;
+};
+
 const directorTasks: TaskItem[] = [
   {
     id: "D-201",
@@ -137,7 +146,8 @@ export default function DirectorTasksPage() {
     dueDate: ''
   });
   const [notificationCount, setNotificationCount] = useState(0);
-  const userId = 1; // TODO: Get from auth context
+  const userId = 2; // TODO: Get from auth context (must match director1 notifications page CURRENT_USER_ID)
+  const [dispatchedTableTasks, setDispatchedTableTasks] = useState<TaskItem[]>([]);
 
   // Manager-уудын жагсаалт
   const [managers, setManagers] = useState<{ id: string | number; name: string; department_id?: number }[]>([
@@ -148,12 +158,7 @@ export default function DirectorTasksPage() {
     { id: "manager5", name: "Менежер Оюун", department_id: 4 },
   ]);
 
-  // Database-ээс бүртгэлтэй менежерүүдийг авах
-  useEffect(() => {
-    fetchManagers();
-  }, []);
-
-  const fetchManagers = async () => {
+  async function fetchManagers() {
     try {
       console.log('Director Tasks - Менежерүүдийг авах оролдлого...');
       
@@ -178,7 +183,7 @@ export default function DirectorTasksPage() {
     } catch (error) {
       console.error('Director Tasks - Менежерүүдийг авахад алдаа гарлаа:', error instanceof Error ? error.message : error);
     }
-  };
+  }
 
   // Database-ээс tasks-ийг авах
   // Fetch notification count
@@ -187,10 +192,53 @@ export default function DirectorTasksPage() {
   }, [userId]);
 
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    const fetchDispatchedTables = async () => {
+      try {
+        const response = await fetch(`/api/notifications?user_id=${userId}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        const notifications = (data.notifications || []) as NotificationApiItem[];
 
-  const fetchTasks = async () => {
+        const mapped = notifications
+          .filter(
+            (item) =>
+              item.type === "task" &&
+              item.title.startsWith("Үүрэг даалгаврын хүснэгт:")
+          )
+          .map((item) => {
+            const title = item.title.replace("Үүрэг даалгаврын хүснэгт:", "").trim();
+            const assignedBy = item.message.split(" танд ")[0]?.trim() || "Менежер";
+            const createdAt = item.created_at
+              ? new Date(item.created_at).toLocaleString("mn-MN")
+              : "Тодорхойгүй";
+
+            return {
+              id: `DISPATCH-${item.id}`,
+              title: title || "Ирсэн хүснэгт",
+              status: "Эсхийг" as TaskStatus,
+              due: createdAt,
+              owner: "Директор",
+              assignedBy,
+              description: item.message,
+            };
+          });
+
+        // Deduplicate in case polling returns same notifications multiple times
+        const unique = Array.from(
+          new Map(mapped.map((task) => [task.id, task])).values()
+        );
+        setDispatchedTableTasks(unique);
+      } catch (error) {
+        console.error("Director Tasks - Илгээсэн хүснэгтийн мэдэгдэл авахад алдаа:", error);
+      }
+    };
+
+    fetchDispatchedTables();
+    const intervalId = setInterval(fetchDispatchedTables, 15000);
+    return () => clearInterval(intervalId);
+  }, [userId]);
+
+  async function fetchTasks() {
     try {
       console.log('Director Tasks - Даалгавруудыг авах оролдлого...');
       
@@ -209,7 +257,20 @@ export default function DirectorTasksPage() {
     } catch (error) {
       console.error('Director Tasks - Даалгавруудыг авахад алдаа гарлаа:', error);
     }
-  };
+  }
+
+  // Database-ээс бүртгэлтэй менежерүүдийг авах
+  useEffect(() => {
+    queueMicrotask(() => {
+      void fetchManagers();
+    });
+  }, []);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void fetchTasks();
+    });
+  }, []);
 
   const handleCreateTask = async () => {
     if (!taskData.title.trim()) {
@@ -219,7 +280,7 @@ export default function DirectorTasksPage() {
 
     try {
       console.log('Director Tasks - Даалгавар хадгалах оролдлого...', taskData);
-      console.log('Supabase URL:', (process.env as any).NEXT_PUBLIC_SUPABASE_URL);
+      console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
       
       // Ensure assigned_to is not empty string
       console.log('Task data before validation:', taskData);
@@ -301,17 +362,19 @@ export default function DirectorTasksPage() {
       description: task.description || 'Тайлбар байхгүй'
     }));
 
+    const mergedTasks = [...dispatchedTableTasks, ...displayTasks];
+
     if (activeFilter === "in_progress") {
-      return displayTasks.filter((task) => task.status === "Эхэлсэн" || task.status === "Зассан");
+      return mergedTasks.filter((task) => task.status === "Эхэлсэн" || task.status === "Зассан");
     }
     if (activeFilter === "pending") {
-      return displayTasks.filter((task) => task.status === "Эсхийг");
+      return mergedTasks.filter((task) => task.status === "Эсхийг");
     }
     if (activeFilter === "completed") {
-      return displayTasks.filter((task) => task.status === "Дууссан");
+      return mergedTasks.filter((task) => task.status === "Дууссан");
     }
-    return displayTasks;
-  }, [activeFilter, tasks]);
+    return mergedTasks;
+  }, [activeFilter, tasks, dispatchedTableTasks]);
 
   const selectedItem = filteredTasks.find((item) => item.id === selectedId) ?? filteredTasks[0];
 

@@ -2,10 +2,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ManagerShell } from "../_components/manager-shell";
 import { getUnreadNotificationCount } from "@/app/_lib/notifications";
 import { VoiceRecorder } from "@/app/_components/voice-recorder";
-import { audienceGroups, meetingTypeOptions } from "@/lib/workflow-config";
 
 type MeetingStatus = "Төлөвлөсөн" | "Баталгаажсан" | "Цуцлагдсан";
 
@@ -26,9 +26,10 @@ type MeetingItem = {
 
 type MeetingApiItem = {
   id: number;
-  meeting_id: string;
+  meeting_id?: string | null;
+  meeting_code?: string | null;
   title: string;
-  status: MeetingStatus;
+  status: MeetingStatus | "scheduled" | "completed" | "cancelled";
   organizer?: { name?: string | null } | null;
   organizer_id: number;
   meeting_date: string;
@@ -39,12 +40,32 @@ type MeetingApiItem = {
   team_id?: number | null;
 };
 
+type RecordingApiItem = {
+  id: number | string;
+  transcription?: string | null;
+};
+
+function resolveMeetingIdentifier(input: { meeting_id?: string | null; meeting_code?: string | null; id: number }) {
+  const meetingId = typeof input.meeting_id === "string" ? input.meeting_id.trim() : "";
+  if (meetingId) return meetingId;
+  const meetingCode = typeof input.meeting_code === "string" ? input.meeting_code.trim() : "";
+  if (meetingCode) return meetingCode;
+  return `MTG-${input.id}`;
+}
+
+function normalizeMeetingStatus(status: MeetingApiItem["status"]): MeetingStatus {
+  if (status === "completed") return "Баталгаажсан";
+  if (status === "cancelled") return "Цуцлагдсан";
+  if (status === "scheduled") return "Төлөвлөсөн";
+  return status;
+}
+
 function mapApiMeetingToItem(m: MeetingApiItem): MeetingItem {
   return {
     id: m.id,
-    meeting_id: m.meeting_id,
+    meeting_id: resolveMeetingIdentifier(m),
     title: m.title,
-    status: m.status,
+    status: normalizeMeetingStatus(m.status),
     organizer: m.organizer?.name || "Unknown",
     organizer_id: m.organizer_id,
     date: new Date(m.meeting_date).toLocaleString("mn-MN"),
@@ -64,8 +85,7 @@ function getStatusClasses(status: MeetingStatus) {
 
 
 export default function ManagerMeetingPage() {
-  type AudienceMode = "all" | "selected" | "department";
-
+  const router = useRouter();
   const [notificationCount, setNotificationCount] = useState(0);
   const userId = 2; // TODO: Get from auth context
   const [items, setItems] = useState<MeetingItem[]>([]);
@@ -73,6 +93,8 @@ export default function ManagerMeetingPage() {
   const [showForm, setShowForm] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<MeetingItem | null>(null);
   const [showReactionForm, setShowReactionForm] = useState(false);
+  const [showMeetingTab, setShowMeetingTab] = useState(false);
+  const [transcripts, setTranscripts] = useState<Record<string, string>>({});
   const [newMeeting, setNewMeeting] = useState({
     title: "",
     date: "",
@@ -80,10 +102,6 @@ export default function ManagerMeetingPage() {
     location: "",
     description: "",
     status: "Төлөвлөсөн" as MeetingStatus,
-    meetingType: "all_hands",
-    audienceMode: "all" as AudienceMode,
-    audienceGroup: "Бүх хэлтэс",
-    participants: ["Director 1", "Director 2", "Manager", "Department Heads", "Leaders"],
   });
   const [reaction, setReaction] = useState({
     status: "Баталгаажсан" as MeetingStatus,
@@ -101,49 +119,6 @@ export default function ManagerMeetingPage() {
     item.title.includes('ажилтан')
   );
 
-  const participantOptions = [
-    "Director 1",
-    "Director 2",
-    "Manager",
-    "Department Heads",
-    "Finance Team",
-    "HR Team",
-    "Operations Team",
-    "Sales Team",
-    "Marketing Team",
-    "Technology Team",
-    "Leaders",
-    "Employees",
-  ];
-
-  const selectedMeetingType = meetingTypeOptions.find((item) => item.id === newMeeting.meetingType) ?? meetingTypeOptions[0];
-
-  const handleMeetingTypeChange = (meetingTypeId: string) => {
-    const targetType = meetingTypeOptions.find((item) => item.id === meetingTypeId) ?? meetingTypeOptions[0];
-    setNewMeeting((current) => ({
-      ...current,
-      meetingType: meetingTypeId,
-      audienceMode:
-        targetType.audienceMode === "all"
-          ? "all"
-          : targetType.audienceMode === "selected"
-            ? "selected"
-            : "department",
-      participants:
-        targetType.audienceMode === "all"
-          ? ["Director 1", "Director 2", "Manager", "Department Heads", "Leaders"]
-          : current.participants,
-    }));
-  };
-
-  const handleParticipantToggle = (participant: string) => {
-    setNewMeeting((current) => ({
-      ...current,
-      participants: current.participants.includes(participant)
-        ? current.participants.filter((item) => item !== participant)
-        : [...current.participants, participant],
-    }));
-  };
 
   const handleSend = async () => {
     if (!newMeeting.title.trim() || !newMeeting.date) {
@@ -156,18 +131,8 @@ export default function ManagerMeetingPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: `[${selectedMeetingType.label}] ${newMeeting.title}`,
-          description:
-            `${newMeeting.description}\n\n` +
-            `Хурлын төрөл: ${selectedMeetingType.label}\n` +
-            `Хүртээмж: ${
-              newMeeting.audienceMode === "all"
-                ? "Нийтээр"
-                : newMeeting.audienceMode === "department"
-                  ? `Хэлтсээр - ${newMeeting.audienceGroup}`
-                  : "Сонгомол"
-            }\n` +
-            `Оролцогчид: ${newMeeting.participants.join(", ")}`,
+          title: newMeeting.title,
+          description: newMeeting.description,
           status: newMeeting.status,
           meeting_date: newMeeting.date,
           location: newMeeting.location,
@@ -184,10 +149,6 @@ export default function ManagerMeetingPage() {
           location: "",
           description: "",
           status: "Төлөвлөсөн" as MeetingStatus,
-          meetingType: "all_hands",
-          audienceMode: "all" as AudienceMode,
-          audienceGroup: "Бүх хэлтэс",
-          participants: ["Director 1", "Director 2", "Manager", "Department Heads", "Leaders"],
         });
         setShowForm(false);
       }
@@ -225,6 +186,33 @@ export default function ManagerMeetingPage() {
     getUnreadNotificationCount(userId).then(setNotificationCount);
     fetchMeetings();
   }, [userId]);
+
+  // Fetch transcripts when a meeting is selected
+  useEffect(() => {
+    if (selectedMeeting) {
+      fetchTranscripts(selectedMeeting.meeting_id || `MTG-${selectedMeeting.id}`);
+    }
+  }, [selectedMeeting]);
+
+  const fetchTranscripts = async (meetingId: string) => {
+    if (!meetingId?.trim()) return;
+    try {
+      const response = await fetch(`/api/recordings/list?meetingId=${meetingId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const recordings = (data.recordings || []) as RecordingApiItem[];
+        const transcriptMap: Record<string, string> = {};
+        recordings.forEach((rec) => {
+          if (rec.transcription) {
+            transcriptMap[String(rec.id)] = rec.transcription;
+          }
+        });
+        setTranscripts(transcriptMap);
+      }
+    } catch (error) {
+      console.error('Error fetching transcripts:', error);
+    }
+  };
 
   const fetchMeetings = async () => {
     try {
@@ -277,35 +265,6 @@ export default function ManagerMeetingPage() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <label className="block">
-              <span className="text-sm font-medium text-slate-700">Хурлын төрөл</span>
-              <select
-                value={newMeeting.meetingType}
-                onChange={(e) => handleMeetingTypeChange(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
-              >
-                {meetingTypeOptions.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-2 text-xs leading-5 text-slate-500">{selectedMeetingType.description}</p>
-            </label>
-
-            <label className="block">
-              <span className="text-sm font-medium text-slate-700">Хүртээмжийн төрөл</span>
-              <select
-                value={newMeeting.audienceMode}
-                onChange={(e) => setNewMeeting((c) => ({ ...c, audienceMode: e.target.value as AudienceMode }))}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
-              >
-                <option value="all">Нийтээр</option>
-                <option value="department">Хэлтсээр</option>
-                <option value="selected">Сонгомол</option>
-              </select>
-            </label>
-
-            <label className="block">
               <span className="text-sm font-medium text-slate-700">Гарчиг</span>
               <input
                 type="text"
@@ -314,23 +273,6 @@ export default function ManagerMeetingPage() {
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
               />
             </label>
-
-            {newMeeting.audienceMode === "department" ? (
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700">Хэлтэс</span>
-                <select
-                  value={newMeeting.audienceGroup}
-                  onChange={(e) => setNewMeeting((c) => ({ ...c, audienceGroup: e.target.value }))}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-400"
-                >
-                  {audienceGroups.map((group) => (
-                    <option key={group} value={group}>
-                      {group}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
 
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Төлөв</span>
@@ -366,40 +308,6 @@ export default function ManagerMeetingPage() {
             </label>
           </div>
 
-          <div className="mt-6 rounded-[26px] border border-slate-200 bg-slate-50 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Оролцогчид</p>
-                <h3 className="mt-2 text-lg font-semibold text-slate-950">Хэнд мэдэгдэл очихыг сонгох</h3>
-              </div>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                {newMeeting.participants.length} сонгосон
-              </span>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {participantOptions.map((participant) => {
-                const checked = newMeeting.participants.includes(participant);
-                return (
-                  <button
-                    key={participant}
-                    type="button"
-                    onClick={() => handleParticipantToggle(participant)}
-                    className={`rounded-2xl border px-4 py-3 text-left text-sm transition ${
-                      checked
-                        ? "border-slate-950 bg-slate-950 text-white"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                    }`}
-                  >
-                    {participant}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-4 rounded-2xl bg-white p-4 text-sm leading-6 text-slate-600">
-              Энэ хурлыг үүсгэхэд сонгогдсон оролцогчид болон шаардлагатай бусад хэлтэст мэдэгдэл очно.
-              Нийтээр хурал бол бүх хэлтэс, сонгомол бол зөвхөн дээрх оролцогчид, хэлтсээр бол сонгосон бүлэгт түгээгдэнэ.
-            </div>
-          </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
             <button
@@ -423,10 +331,14 @@ export default function ManagerMeetingPage() {
       {/* Таб хэсэг */}
       <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Хурлын ангилал</p>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-950">Хурал, уулзалт</h2>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowMeetingTab(!showMeetingTab)}
+            className="text-left group"
+          >
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Хурал, уулзалт</p>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-950 group-hover:text-slate-700 transition">Хурал, уулзалт</h2>
+          </button>
           <div className="flex rounded-2xl bg-slate-100 p-1">
             <button
               type="button"
@@ -454,138 +366,86 @@ export default function ManagerMeetingPage() {
         </div>
 
         {/* Таб контент */}
-        <div className="overflow-hidden rounded-[24px] border border-slate-200">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-500">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Код</th>
-                  <th className="px-4 py-3 font-medium">Гарчиг</th>
-                  <th className="px-4 py-3 font-medium">Зохион байгуулагч</th>
-                  <th className="px-4 py-3 font-medium">Огноо</th>
-                  <th className="px-4 py-3 font-medium">Төлөв</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 bg-white">
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                      Ачааллаж байна...
-                    </td>
-                  </tr>
-                ) : (activeTab === 'all' ? items : teamMeetings).length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                      Хурал олдсонгүй
-                    </td>
-                  </tr>
-                ) : (
-                  (activeTab === 'all' ? items : teamMeetings).map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-4 font-medium text-slate-950">{item.meeting_id}</td>
-                      <td className="px-4 py-4 text-slate-700">
-                        <p className="font-medium text-slate-950">{item.title}</p>
-                        <p className="mt-1 text-xs text-slate-500">{item.location}</p>
-                      </td>
-                      <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
-                      <td className="px-4 py-4 text-slate-700">{item.date}</td>
-                      <td className="px-4 py-4">
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(item.status)}`}>
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <div className="grid gap-6 xl:grid-cols-[0.7fr_1.3fr]">
+        <div className="space-y-6">
+          <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Жагсаалт</p>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-950">{(activeTab === 'all' ? items : teamMeetings).length} хурал</h2>
 
-        {activeTab === 'team' && teamMeetings.length === 0 && (
-          <div className="mt-4 rounded-2xl bg-slate-50 p-6 text-center">
-            <p className="text-sm text-slate-600">Багийн хурал олдсонгүй</p>
-            <button
-              type="button"
-              onClick={() => setShowForm(true)}
-              className="mt-3 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Багийн хурал үүсгэх
-            </button>
-          </div>
-        )}
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Хуваарь</p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Ойрын хурлууд</h2>
-
-          <div className="mt-6 overflow-hidden rounded-[24px] border border-slate-200">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50 text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Код</th>
-                    <th className="px-4 py-3 font-medium">Гарчиг</th>
-                    <th className="px-4 py-3 font-medium">Зохион байгуулагч</th>
-                    <th className="px-4 py-3 font-medium">Огноо</th>
-                    <th className="px-4 py-3 font-medium">Төлөв</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 bg-white">
-                  {loading ? (
+            <div className="overflow-hidden rounded-[24px] border border-slate-200 mt-6">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-slate-500">
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                        Ачааллаж байна...
-                      </td>
+                      <th className="px-4 py-3 font-medium">Код</th>
+                      <th className="px-4 py-3 font-medium">Гарчиг</th>
+                      <th className="px-4 py-3 font-medium">Төлөв</th>
                     </tr>
-                  ) : items.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                        Хурал олдсонгүй
-                      </td>
-                    </tr>
-                  ) : (
-                    items.map((item) => (
-                      <tr
-                        key={item.id}
-                        onClick={() => setSelectedMeeting(item)}
-                        className="cursor-pointer transition hover:bg-slate-50"
-                      >
-                        <td className="px-4 py-4 font-medium text-slate-950">{item.meeting_id}</td>
-                        <td className="px-4 py-4 text-slate-700">
-                          <p className="font-medium text-slate-950">{item.title}</p>
-                          <p className="mt-1 text-xs text-slate-500">{item.location}</p>
-                        </td>
-                        <td className="px-4 py-4 text-slate-700">{item.organizer}</td>
-                        <td className="px-4 py-4 text-slate-700">{item.date}</td>
-                        <td className="px-4 py-4">
-                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(item.status)}`}>
-                            {item.status}
-                          </span>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-8 text-center text-slate-500">
+                          Ачааллаж байна...
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (activeTab === 'all' ? items : teamMeetings).length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-8 text-center text-slate-500">
+                          Хурал олдсонгүй
+                        </td>
+                      </tr>
+                    ) : (
+                      (activeTab === 'all' ? items : teamMeetings).map((item) => (
+                        <tr
+                          key={item.id}
+                          onClick={() => {
+                            console.log('Selected meeting:', item);
+                            setSelectedMeeting(item);
+                          }}
+                          className={`cursor-pointer transition ${
+                            selectedMeeting?.id === item.id ? 'bg-slate-100' : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <td className="px-4 py-4 font-medium text-slate-950">{item.meeting_id}</td>
+                          <td className="px-4 py-4 text-slate-700">
+                            <p className="font-medium text-slate-950">{item.title}</p>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(item.status)}`}>
+                              {item.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        </article>
-      </section>
 
-      {/* Meeting Detail Modal with Voice Recorder */}
-      {selectedMeeting && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setSelectedMeeting(null)}
-        >
-          <div
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[30px] bg-white p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
+            {activeTab === 'team' && teamMeetings.length === 0 && (
+              <div className="mt-4 rounded-2xl bg-slate-50 p-6 text-center">
+                <p className="text-sm text-slate-600">Багийн хурал олдсонгүй</p>
+                <button
+                  type="button"
+                  onClick={() => setShowForm(true)}
+                  className="mt-3 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Багийн хурал үүсгэх
+                </button>
+              </div>
+            )}
+          </article>
+        </div>
+
+        {/* Meeting Detail Panel */}
+        {selectedMeeting && (
+          <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
+            {(() => {
+              const recorderMeetingId = selectedMeeting.meeting_id?.trim() || `MTG-${selectedMeeting.id}`;
+              return (
+                <>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{selectedMeeting.meeting_id}</p>
@@ -603,37 +463,79 @@ export default function ManagerMeetingPage() {
 
             {/* Meeting Details */}
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs text-slate-400 uppercase tracking-[0.24em]">Зохион байгуулагч</p>
-                <p className="mt-2 font-medium text-slate-950">{selectedMeeting.organizer}</p>
+              <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 p-6 border border-slate-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="rounded-full bg-blue-100 p-3">
+                    <span className="text-xl">👤</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider">Зохион байгуулагч</p>
+                    <p className="text-lg font-bold text-slate-950">{selectedMeeting.organizer}</p>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs text-slate-400 uppercase tracking-[0.24em]">Огноо</p>
-                <p className="mt-2 font-medium text-slate-950">{selectedMeeting.date}</p>
+              <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 p-6 border border-slate-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="rounded-full bg-purple-100 p-3">
+                    <span className="text-xl">📅</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider">Огноо</p>
+                    <p className="text-lg font-bold text-slate-950">{selectedMeeting.date}</p>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs text-slate-400 uppercase tracking-[0.24em]">Байршил</p>
-                <p className="mt-2 font-medium text-slate-950">{selectedMeeting.location}</p>
+              <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 p-6 border border-slate-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="rounded-full bg-emerald-100 p-3">
+                    <span className="text-xl">📍</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider">Байршил</p>
+                    <p className="text-lg font-bold text-slate-950">{selectedMeeting.location}</p>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs text-slate-400 uppercase tracking-[0.24em]">Төлөв</p>
-                <span className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(selectedMeeting.status)}`}>
-                  {selectedMeeting.status}
-                </span>
+              <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 p-6 border border-slate-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="rounded-full bg-amber-100 p-3">
+                    <span className="text-xl">📊</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider">Төлөв</p>
+                    <span className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(selectedMeeting.status)}`}>
+                      {selectedMeeting.status}
+                    </span>
+                  </div>
+                </div>
               </div>
               {selectedMeeting.description && (
-                <div className="rounded-2xl bg-slate-50 p-4 md:col-span-2">
-                  <p className="text-xs text-slate-400 uppercase tracking-[0.24em]">Тайлбар</p>
-                  <p className="mt-2 font-medium text-slate-950">{selectedMeeting.description}</p>
+                <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 p-6 border border-slate-200 md:col-span-2">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-sky-100 p-3">
+                      <span className="text-xl">📝</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Тайлбар</p>
+                      <p className="text-sm font-medium text-slate-700">{selectedMeeting.description}</p>
+                    </div>
+                  </div>
                 </div>
               )}
               {selectedMeeting.manager_reaction && (
-                <div className="rounded-2xl bg-emerald-50 p-4 md:col-span-2">
-                  <p className="text-xs text-emerald-600 uppercase tracking-[0.24em]">Менежерийн хариу</p>
-                  <p className="mt-2 font-medium text-emerald-700">{selectedMeeting.manager_reaction}</p>
-                  {selectedMeeting.manager_comment && (
-                    <p className="mt-1 text-sm text-emerald-600">{selectedMeeting.manager_comment}</p>
-                  )}
+                <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 border border-emerald-200 md:col-span-2">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-emerald-200 p-3">
+                      <span className="text-xl">✅</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-emerald-600 uppercase tracking-wider mb-2">Менежерийн хариу</p>
+                      <p className="text-sm font-medium text-emerald-700">{selectedMeeting.manager_reaction}</p>
+                      {selectedMeeting.manager_comment && (
+                        <p className="mt-1 text-sm text-emerald-600">{selectedMeeting.manager_comment}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -642,14 +544,29 @@ export default function ManagerMeetingPage() {
             <div className="mt-6">
               <p className="mb-4 text-xs uppercase tracking-[0.3em] text-slate-400">Дуу бичлэг</p>
               <VoiceRecorder
-                meetingId={selectedMeeting.meeting_id}
+                meetingId={recorderMeetingId}
                 userId={userId}
                 onRecordingSaved={() => {
-                  console.log("Recording saved for meeting:", selectedMeeting.meeting_id);
+                  fetchTranscripts(recorderMeetingId);
+                  router.push("/manager/tasks");
                 }}
                 maxDuration={600}
               />
             </div>
+
+            {/* Voice Transcript Section */}
+            {Object.keys(transcripts).length > 0 && (
+              <div className="mt-6">
+                <p className="mb-4 text-xs uppercase tracking-[0.3em] text-slate-400">Дуу бичлэгийн текст</p>
+                <div className="space-y-3">
+                  {Object.entries(transcripts).map(([id, text]) => (
+                    <div key={id} className="rounded-2xl bg-slate-50 p-4">
+                      <p className="text-sm text-slate-700 leading-relaxed">{text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Manager Reaction Form */}
             {showReactionForm && (
@@ -682,7 +599,7 @@ export default function ManagerMeetingPage() {
                     <span className="text-sm font-medium text-slate-700">Санал</span>
                     <textarea
                       value={reaction.manager_comment}
- onChange={(e) => setReaction((c) => ({ ...c, manager_comment: e.target.value }))}
+                      onChange={(e) => setReaction((c) => ({ ...c, manager_comment: e.target.value }))}
                       placeholder="Нэмэлт тайлбар"
                       rows={3}
                       className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-slate-400"
@@ -714,16 +631,14 @@ export default function ManagerMeetingPage() {
               >
                 {showReactionForm ? 'Хаах' : 'Хариу өгөх'}
               </button>
-              <button
-                onClick={() => setSelectedMeeting(null)}
-                className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-50"
-              >
-                Хаах
-              </button>
             </div>
-          </div>
+                </>
+              );
+            })()}
+          </article>
+        )}
         </div>
-      )}
+      </section>
     </ManagerShell>
   );
 }

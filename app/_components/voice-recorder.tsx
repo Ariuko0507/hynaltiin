@@ -124,10 +124,12 @@ export function VoiceRecorder({
 
   const saveRecording = useCallback(async () => {
     if (!audioBlob) return;
-    
+
+    console.log('saveRecording called with meetingId:', meetingId, 'type:', typeof meetingId);
+
     setIsUploading(true);
     setError("");
-    
+
     try {
       const result = await uploadMeetingRecording(meetingId, audioBlob, userId, duration);
       alert("Бичлэг амжилттай хадгалагдлаа!");
@@ -137,7 +139,7 @@ export function VoiceRecorder({
       // Trigger transcription if recordId is available
       if (result.recordId && result.publicUrl) {
         console.log("Starting transcription...");
-        const transcriptionResult = await transcribeRecording(result.recordId, result.publicUrl);
+        const transcriptionResult = await transcribeRecording(result.recordId, result.publicUrl, meetingId, userId);
         if (
           transcriptionResult &&
           typeof transcriptionResult === 'object' &&
