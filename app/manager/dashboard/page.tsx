@@ -142,6 +142,12 @@ export default function ManagerDashboardPage() {
     }
   };
 
+  const formatMeetingDateTime = (value: string | null | undefined) => {
+    if (!value) return '';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return parsed.toLocaleString('mn-MN');
+  };
   const handleCreateMeeting = async () => {
     if (!meetingData.title.trim()) {
       alert('Хурлын гарчиг оруулна уу!');
@@ -160,35 +166,27 @@ export default function ManagerDashboardPage() {
 
     try {
       console.log('Manager - Хурал хадгалах оролдлого...', meetingData);
-      console.log('Supabase URL:', (process.env as any).NEXT_PUBLIC_SUPABASE_URL);
-      
-      const insertData = {
-        meeting_id: `meeting_${Date.now()}`,
-        title: meetingData.title,
-        description: meetingData.description,
-        meeting_date: meetingData.date,
-        meeting_time: meetingData.time,
-        status: 'scheduled',
-        organizer: 'Менежер Тэмүүжин',
-        participants: 'Багийн гишүүд'
-      };
-      
-      console.log('Insert data:', insertData);
-      
-      const { data, error } = await supabase
-        .from('meetings')
-        .insert(insertData);
+      const meetingDateTime = `${meetingData.date}T${meetingData.time}:00`;
+      const response = await fetch('/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: meetingData.title,
+          description: meetingData.description,
+          meeting_date: meetingDateTime,
+          location: meetingData.location,
+          organizer_id: userId,
+        }),
+      });
 
-      console.log('Insert result:', { data, error });
-
-      if (error) {
-        console.error('Manager - Хурал хадгалахад алдаа гарлаа:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        alert('Хурал хадгалахад алдаа гарлаа: ' + JSON.stringify(error));
+      const result = await response.json();
+      if (!response.ok) {
+        console.error('Manager - Хурал хадгалахад алдаа гарлаа:', result);
+        alert('Хурал хадгалахад алдаа гарлаа: ' + (result?.error || 'Unknown error'));
         return;
       }
       
-      console.log('Manager - Хурал амжилттай хадгалагдлаа:', data);
+      console.log('Manager - Хурал амжилттай хадгалагдлаа:', result);
       alert('Хурал амжилттай товлогдлоо!');
       
       setMeetingData({
@@ -383,7 +381,7 @@ export default function ManagerDashboardPage() {
                             'text-amber-500'
                           }>•</span>
                           <span>
-                            {meeting.title} - {meeting.meeting_date} {meeting.meeting_time}
+                            {meeting.title} - {formatMeetingDateTime(meeting.meeting_date)}
                           </span>
                         </li>
                       ))
@@ -472,3 +470,4 @@ export default function ManagerDashboardPage() {
     </ManagerShell>
   );
 }
+
